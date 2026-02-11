@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Shodan](https://www.shodan.io/static/img/logo.png)
+![Shodan](https://www.shodan.io/static/img/logo-6abcc86b.png)
 
 An advanced, all-in-one Shodan wrapper skill for AI agents running on OpenClaw.
 
