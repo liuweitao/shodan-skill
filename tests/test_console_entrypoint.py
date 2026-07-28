@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import sys
+import sysconfig
 from pathlib import Path
 
 
 def console_path() -> Path:
     suffix = ".exe" if os.name == "nt" else ""
-    return Path(sys.executable).with_name(f"shodan-skill{suffix}")
+    return Path(sysconfig.get_path("scripts")) / f"shodan-skill{suffix}"
 
 
 def run_console(*args: str, home: Path) -> subprocess.CompletedProcess[str]:

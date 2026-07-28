@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import sys
+import sysconfig
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -63,7 +63,7 @@ GROUP_SMOKES = [
 def test_installed_entrypoint_representative_group_smokes(tmp_path: Path, args: list[str]) -> None:
     suffix = ".exe" if os.name == "nt" else ""
     configured = os.environ.get("SHODAN_SKILL_CONSOLE")
-    executable = Path(configured) if configured else Path(sys.executable).with_name(f"shodan-skill{suffix}")
+    executable = Path(configured) if configured else Path(sysconfig.get_path("scripts")) / f"shodan-skill{suffix}"
     assert executable.is_file()
     with mock_server() as base_url:
         sitecustomize = tmp_path / "sitecustomize.py"
