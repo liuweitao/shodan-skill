@@ -1,0 +1,3 @@
+name: "shodan-skill"
+version: "2.0.0"
+command: "shodan-skill"

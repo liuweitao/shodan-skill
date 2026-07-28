@@ -1,0 +1,8 @@
+name: "shodan-skill"
+version: "2.0.0"
+entrypoint: "shodan-skill"
+requires:
+  commands:
+    - "shodan-skill"
+  environment:
+    - "SHODAN_API_KEY"

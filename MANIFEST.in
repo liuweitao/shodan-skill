@@ -1,0 +1,10 @@
+include SKILL.md
+include README_CN.md
+include SECURITY.md
+recursive-include agents *.yaml
+recursive-include platforms *
+recursive-include references *.md *.yaml
+recursive-include scripts *.py *.yaml
+prune tests
+prune .github
+global-exclude *.py[cod]

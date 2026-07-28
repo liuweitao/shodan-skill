@@ -1,0 +1,18 @@
+- prompt: "Use Shodan to inspect the services exposed by 8.8.8.8."
+  should_trigger: true
+- prompt: "Search Shodan Exploits for an Apache vulnerability."
+  should_trigger: true
+- prompt: "Open an authorized Shodan streaming feed for port 443."
+  should_trigger: true
+- prompt: "Resolve this domain through the Shodan DNS endpoint."
+  should_trigger: true
+- prompt: "使用 Shodan 查询 8.8.8.8 暴露的服务。"
+  should_trigger: true
+- prompt: "Summarize this local PDF document."
+  should_trigger: false
+- prompt: "Refactor the CSS grid in my landing page."
+  should_trigger: false
+- prompt: "Scan this local PDF and extract the text."
+  should_trigger: false
+- prompt: "Fix the DNS settings on my local router."
+  should_trigger: false

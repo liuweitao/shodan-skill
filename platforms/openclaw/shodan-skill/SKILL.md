@@ -1,6 +1,12 @@
 ---
 name: shodan-skill
 description: Use the installed shodan-skill CLI for documented Shodan REST, Streaming, Trends, and Exploits operations, including host intelligence, search and facets, DNS, scans, alerts, notifiers, bulk datasets, organizations, and real-time feeds. Trigger for Shodan lookups, exposure research, scan or monitoring requests, API coverage questions, and Shodan account or Enterprise workflows. Treat the user's explicit request as the instruction to execute it without a second confirmation; never infer an unstated operation from an API key.
+metadata:
+  openclaw:
+    emoji: "🔎"
+    requires:
+      bins:
+        - "shodan-skill"
 ---
 
 # Shodan Skill
@@ -32,3 +38,7 @@ Use `shodan-skill` as the single implementation on every supported agent platfor
 - Read [safety](references/safety.md) before any credit-consuming, state-changing, destructive, scanning, monitoring, or download operation.
 
 Use deprecated underscore aliases only to preserve an existing workflow. Generate new instructions and examples with the grouped interface.
+
+## OpenClaw installation
+
+Install the `shodan-skill` Python package first, then place this generated directory at `~/.openclaw/skills/shodan-skill`. Confirm discovery with `shodan-skill --help` before an API request.

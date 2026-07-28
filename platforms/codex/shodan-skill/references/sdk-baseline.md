@@ -1,0 +1,68 @@
+# Official Python SDK baseline
+
+Rechecked on 2026-07-27. The selected compatibility baseline is `shodan==1.31.0`, the current stable release resolved from the official Python package. The canonical implementation uses the documented raw HTTP APIs so SDK gaps do not limit endpoint coverage.
+
+## Relevant supported signatures
+
+```text
+Shodan.host(ips, history=False, minify=False)
+Shodan.count(query, facets=None)
+Shodan.search(query, page=1, limit=None, offset=None, facets=None, minify=True, fields=None)
+Shodan.search_cursor(query, minify=True, retries=5, fields=None)
+Shodan.search_facets()
+Shodan.search_filters()
+Shodan.search_tokens(query)
+Shodan.info()
+Shodan.ports()
+Shodan.protocols()
+Shodan.services()
+Shodan.labs.honeyscore(ip)
+Shodan.scan(ips, force=False)
+Shodan.scan_internet(port, protocol)
+Shodan.scans(page=1)
+Shodan.scan_status(scan_id)
+Shodan.alerts(aid=None, include_expired=True)
+Shodan.queries(page=1, sort='timestamp', order='desc')
+Shodan.queries_search(query, page=1)
+Shodan.queries_tags(size=10)
+Shodan.alert_triggers()
+Shodan.create_alert(name, ip, expires=0)
+Shodan.edit_alert(aid, ip)
+Shodan.delete_alert(aid)
+Shodan.enable_alert_trigger(aid, trigger)
+Shodan.disable_alert_trigger(aid, trigger)
+Shodan.ignore_alert_trigger_notification(aid, trigger, ip, port, vulns=None)
+Shodan.unignore_alert_trigger_notification(aid, trigger, ip, port)
+Shodan.add_alert_notifier(aid, nid)
+Shodan.remove_alert_notifier(aid, nid)
+DNS.domain_info(domain, history=False, type=None, page=1)
+Data.list_datasets()
+Data.list_files(dataset)
+Notifier.list_notifiers()
+Notifier.list_providers()
+Notifier.get(nid)
+Notifier.create(provider, args, description=None)
+Notifier.edit(nid, args)
+Notifier.remove(nid)
+Organization.info()
+Organization.add_member(user, notify=True)
+Organization.remove_member(user)
+Tools.myip()
+Exploits.search(query, page=1, facets=None)
+Exploits.count(query, facets=None)
+Trends.search(query, facets)
+Trends.search_filters()
+Trends.search_facets()
+Stream.banners(raw=False, timeout=None)
+Stream.asn(asn, raw=False, timeout=None)
+Stream.countries(countries, raw=False, timeout=None)
+Stream.ports(ports, raw=False, timeout=None)
+Stream.vulns(vulns, raw=False, timeout=None)
+Stream.alert(aid=None, timeout=None, raw=False)
+Stream.custom(query, raw=False, timeout=None)
+Stream.tags(tags, raw=False, timeout=None)
+```
+
+The SDK's public surface has no helpers for `/account/profile`, `/dns/resolve`, `/dns/reverse`, or `/tools/httpheaders`. Its `Trends.search` signature also requires `facets` even though the official HTTP documentation marks that parameter optional. The canonical raw transport implements the documented HTTP behavior directly, so these SDK gaps do not alter the CLI contract.
+
+The SDK also exposes `/shodan/services`, `/labs/honeyscore/{ip}`, `Stream.tags(tags, ...)`, and a vulnerability-specific ignored-alert path variant. They are not present in the current public HTTP documentation and are intentionally not counted in the official coverage manifest. Load the root Skill's SDK-only reference for the explicit exclusion and live-verification status.

@@ -1,0 +1,769 @@
+schema_version: 1
+official_snapshot: references/official-api-snapshot.yaml
+official_retrieved: 2026-07-27
+official_operation_count: 58
+family_counts:
+  rest: 45
+  streaming: 8
+  trends: 3
+  exploits: 2
+representation_notes:
+  - The Streaming alert collection and alert-by-ID feeds are separate documented paths and therefore separate operations.
+  - The Streaming custom heading includes query in the documentation, but query is represented as a required query parameter on /shodan/custom.
+  - The official Python SDK exposes an undocumented tags stream; it is excluded because this manifest tracks current documented HTTP operations.
+allowed_states:
+  implementation: [planned, partial, complete]
+  contract_test: [planned, complete]
+  live_test: [not-run, passed, failed, skipped]
+
+operation_defaults: &operation_defaults
+  access: standard
+  credit_impact: none
+  mutation: false
+  destructive: false
+  required_query: []
+  implementation: planned
+  contract_test: planned
+  contract_tests: []
+  live_test: not-run
+  live_test_reason: no-live-authorization
+
+operations:
+  - <<: *operation_defaults
+    id: shodan-host-info
+    api: rest
+    method: GET
+    path: /shodan/host/{ip}
+    cli: host info
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-host-info]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-host-count
+    api: rest
+    method: GET
+    path: /shodan/host/count
+    cli: search count
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-host-count]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-host-search
+    api: rest
+    method: GET
+    path: /shodan/host/search
+    cli: search hosts
+    credit_impact: conditional
+    risk: [read-only, credit-consuming]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-host-search]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-search-facets
+    api: rest
+    method: GET
+    path: /shodan/host/search/facets
+    cli: search facets
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-search-facets]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-search-filters
+    api: rest
+    method: GET
+    path: /shodan/host/search/filters
+    cli: search filters
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-search-filters]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-search-tokens
+    api: rest
+    method: GET
+    path: /shodan/host/search/tokens
+    cli: search tokens
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-search-tokens]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-ports
+    api: rest
+    method: GET
+    path: /shodan/ports
+    cli: scan ports
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-ports]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-protocols
+    api: rest
+    method: GET
+    path: /shodan/protocols
+    cli: scan protocols
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-protocols]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-scan-submit
+    api: rest
+    method: POST
+    path: /shodan/scan
+    cli: scan submit
+    credit_impact: scan
+    mutation: true
+    risk: [credit-consuming, state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-scan-submit]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-scan-internet
+    api: rest
+    method: POST
+    path: /shodan/scan/internet
+    cli: scan internet
+    access: enterprise
+    credit_impact: unknown
+    mutation: true
+    risk: [credit-consuming, state-changing, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-scan-internet]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-scans-list
+    api: rest
+    method: GET
+    path: /shodan/scans
+    cli: scan list
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-scans-list]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-scan-status
+    api: rest
+    method: GET
+    path: /shodan/scan/{id}
+    cli: scan status
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-scan-status]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-query-list
+    api: rest
+    method: GET
+    path: /shodan/query
+    cli: query list
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-query-list]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-query-search
+    api: rest
+    method: GET
+    path: /shodan/query/search
+    cli: query search
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-query-search]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-query-tags
+    api: rest
+    method: GET
+    path: /shodan/query/tags
+    cli: query tags
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-query-tags]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-detail
+    api: rest
+    method: GET
+    path: /shodan/alert/{id}/info
+    cli: alert info
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-detail]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-list
+    api: rest
+    method: GET
+    path: /shodan/alert/info
+    cli: alert list
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-list]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-triggers
+    api: rest
+    method: GET
+    path: /shodan/alert/triggers
+    cli: alert triggers
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-triggers]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-create
+    api: rest
+    method: POST
+    path: /shodan/alert
+    cli: alert create
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-create]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-delete
+    api: rest
+    method: DELETE
+    path: /shodan/alert/{id}
+    cli: alert delete
+    mutation: true
+    destructive: true
+    risk: [state-changing, destructive]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-delete]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-edit
+    api: rest
+    method: POST
+    path: /shodan/alert/{id}
+    cli: alert edit
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-edit]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-trigger-enable
+    api: rest
+    method: PUT
+    path: /shodan/alert/{id}/trigger/{trigger}
+    cli: alert trigger enable
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-trigger-enable]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-trigger-disable
+    api: rest
+    method: DELETE
+    path: /shodan/alert/{id}/trigger/{trigger}
+    cli: alert trigger disable
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-trigger-disable]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-trigger-ignore
+    api: rest
+    method: PUT
+    path: /shodan/alert/{id}/trigger/{trigger}/ignore/{service}
+    cli: alert trigger ignore
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-trigger-ignore]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-trigger-unignore
+    api: rest
+    method: DELETE
+    path: /shodan/alert/{id}/trigger/{trigger}/ignore/{service}
+    cli: alert trigger unignore
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-trigger-unignore]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-notifier-add
+    api: rest
+    method: PUT
+    path: /shodan/alert/{id}/notifier/{notifier_id}
+    cli: alert notifier add
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-notifier-add]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-alert-notifier-remove
+    api: rest
+    method: DELETE
+    path: /shodan/alert/{id}/notifier/{notifier_id}
+    cli: alert notifier remove
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-alert-notifier-remove]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-notifier-list
+    api: rest
+    method: GET
+    path: /notifier
+    cli: notifier list
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-notifier-list]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-notifier-detail
+    api: rest
+    method: GET
+    path: /notifier/{id}
+    cli: notifier info
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-notifier-detail]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-notifier-providers
+    api: rest
+    method: GET
+    path: /notifier/provider
+    cli: notifier providers
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-notifier-providers]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-notifier-create
+    api: rest
+    method: POST
+    path: /notifier
+    cli: notifier create
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-notifier-create]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-notifier-edit
+    api: rest
+    method: PUT
+    path: /notifier/{id}
+    cli: notifier edit
+    mutation: true
+    risk: [state-changing]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-notifier-edit]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-notifier-delete
+    api: rest
+    method: DELETE
+    path: /notifier/{id}
+    cli: notifier delete
+    mutation: true
+    destructive: true
+    risk: [state-changing, destructive]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_mutations.py::test_mutation_http_contracts[shodan-notifier-delete]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-data-list
+    api: rest
+    method: GET
+    path: /shodan/data
+    cli: data list
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_enterprise.py::test_enterprise_http_contracts[shodan-data-list]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-data-files
+    api: rest
+    method: GET
+    path: /shodan/data/{dataset}
+    cli: data files
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_enterprise.py::test_enterprise_http_contracts[shodan-data-files]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-org-info
+    api: rest
+    method: GET
+    path: /org
+    cli: org info
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_enterprise.py::test_enterprise_http_contracts[shodan-org-info]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-org-member-add
+    api: rest
+    method: PUT
+    path: /org/member/{user}
+    cli: org member add
+    access: enterprise
+    mutation: true
+    risk: [state-changing, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_enterprise.py::test_enterprise_http_contracts[shodan-org-member-add]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-org-member-remove
+    api: rest
+    method: DELETE
+    path: /org/member/{user}
+    cli: org member remove
+    access: enterprise
+    mutation: true
+    destructive: true
+    risk: [state-changing, destructive, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_enterprise.py::test_enterprise_http_contracts[shodan-org-member-remove]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-account-profile
+    api: rest
+    method: GET
+    path: /account/profile
+    cli: account profile
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-account-profile]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-dns-domain
+    api: rest
+    method: GET
+    path: /dns/domain/{domain}
+    cli: dns domain
+    credit_impact: query
+    risk: [read-only, credit-consuming]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-dns-domain]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-dns-resolve
+    api: rest
+    method: GET
+    path: /dns/resolve
+    cli: dns resolve
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-dns-resolve]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-dns-reverse
+    api: rest
+    method: GET
+    path: /dns/reverse
+    cli: dns reverse
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-dns-reverse]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-tools-httpheaders
+    api: rest
+    method: GET
+    path: /tools/httpheaders
+    cli: tools httpheaders
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-tools-httpheaders]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-tools-myip
+    api: rest
+    method: GET
+    path: /tools/myip
+    cli: tools myip
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-tools-myip]
+    docs_url: https://developer.shodan.io/api
+  - <<: *operation_defaults
+    id: shodan-api-info
+    api: rest
+    method: GET
+    path: /api-info
+    cli: account api-info
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_readonly.py::test_readonly_http_contracts[shodan-api-info]
+    docs_url: https://developer.shodan.io/api
+
+  - <<: *operation_defaults
+    id: shodan-stream-banners
+    api: streaming
+    method: GET
+    path: /shodan/banners
+    cli: stream banners
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-banners]
+    docs_url: https://developer.shodan.io/api/stream
+  - <<: *operation_defaults
+    id: shodan-stream-asn
+    api: streaming
+    method: GET
+    path: /shodan/asn/{asn}
+    cli: stream asn
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-asn]
+    docs_url: https://developer.shodan.io/api/stream
+  - <<: *operation_defaults
+    id: shodan-stream-countries
+    api: streaming
+    method: GET
+    path: /shodan/countries/{countries}
+    cli: stream countries
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-countries]
+    docs_url: https://developer.shodan.io/api/stream
+  - <<: *operation_defaults
+    id: shodan-stream-ports
+    api: streaming
+    method: GET
+    path: /shodan/ports/{ports}
+    cli: stream ports
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-ports]
+    docs_url: https://developer.shodan.io/api/stream
+  - <<: *operation_defaults
+    id: shodan-stream-vulns
+    api: streaming
+    method: GET
+    path: /shodan/vulns/{vulns}
+    cli: stream vulns
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-vulns]
+    docs_url: https://developer.shodan.io/api/stream
+  - <<: *operation_defaults
+    id: shodan-stream-alerts
+    api: streaming
+    method: GET
+    path: /shodan/alert
+    cli: stream alerts
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-alerts]
+    docs_url: https://developer.shodan.io/api/stream
+  - <<: *operation_defaults
+    id: shodan-stream-alert
+    api: streaming
+    method: GET
+    path: /shodan/alert/{id}
+    cli: stream alert
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-alert]
+    docs_url: https://developer.shodan.io/api/stream
+  - <<: *operation_defaults
+    id: shodan-stream-custom
+    api: streaming
+    method: GET
+    path: /shodan/custom
+    cli: stream custom
+    access: enterprise
+    required_query: [query]
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_stream_http_contracts[shodan-stream-custom]
+    docs_url: https://developer.shodan.io/api/stream
+
+  - <<: *operation_defaults
+    id: shodan-trends-search
+    api: trends
+    method: GET
+    path: /api/v1/search
+    cli: trends search
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_secondary_http_contracts[shodan-trends-search]
+    docs_url: https://developer.shodan.io/api/trends
+  - <<: *operation_defaults
+    id: shodan-trends-filters
+    api: trends
+    method: GET
+    path: /api/v1/search/filters
+    cli: trends filters
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_secondary_http_contracts[shodan-trends-filters]
+    docs_url: https://developer.shodan.io/api/trends
+  - <<: *operation_defaults
+    id: shodan-trends-facets
+    api: trends
+    method: GET
+    path: /api/v1/search/facets
+    cli: trends facets
+    access: enterprise
+    risk: [read-only, enterprise-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_secondary_http_contracts[shodan-trends-facets]
+    docs_url: https://developer.shodan.io/api/trends
+
+  - <<: *operation_defaults
+    id: shodan-exploits-search
+    api: exploits
+    method: GET
+    path: /search
+    cli: exploits search
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_secondary_http_contracts[shodan-exploits-search]
+    docs_url: https://developer.shodan.io/api/exploits/rest
+  - <<: *operation_defaults
+    id: shodan-exploits-count
+    api: exploits
+    method: GET
+    path: /count
+    cli: exploits count
+    risk: [read-only]
+    implementation: complete
+    contract_test: complete
+    contract_tests:
+      - tests/test_contract_secondary.py::test_secondary_http_contracts[shodan-exploits-count]
+    docs_url: https://developer.shodan.io/api/exploits/rest

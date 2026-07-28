@@ -1,0 +1,6 @@
+interface:
+  display_name: "Shodan Skill"
+  short_description: "Query Shodan APIs safely from one CLI"
+  default_prompt: "Use $shodan-skill to inspect a target with a read-only Shodan host lookup."
+policy:
+  allow_implicit_invocation: true
