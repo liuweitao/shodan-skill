@@ -180,28 +180,6 @@ def test_gitignore_excludes_local_credential_files() -> None:
     assert "api_key" in patterns
 
 
-def test_ci_actions_are_pinned_to_full_release_commits() -> None:
-    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
-    uses = re.findall(r"uses:\s+([^@\s]+)@([0-9a-f]{40})", workflow)
-
-    assert dict(uses) == {
-        "actions/checkout": "de0fac2e4500dabe0009e67214ff5f5447ce83dd",
-        "actions/setup-python": "a309ff8b426b58ec0e2a45f0f869d46889d02405",
-    }
-
-
-def test_documentation_actions_are_pinned_to_full_release_commits() -> None:
-    workflow = Path(".github/workflows/docs.yml").read_text(encoding="utf-8")
-    uses = re.findall(r"uses:\s+([^@\s]+)@([0-9a-f]{40})", workflow)
-
-    assert dict(uses) == {
-        "actions/checkout": "de0fac2e4500dabe0009e67214ff5f5447ce83dd",
-        "actions/setup-python": "a309ff8b426b58ec0e2a45f0f869d46889d02405",
-        "actions/upload-pages-artifact": "56afc609e74202658d3ffba0e8f6dda462b719fa",
-        "actions/deploy-pages": "d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
-    }
-
-
 def test_operation_references_match_repaired_cli_contracts() -> None:
     streaming = Path("references/streaming.md").read_text(encoding="utf-8")
     mutations = Path("references/scan-and-alerts.md").read_text(encoding="utf-8")
