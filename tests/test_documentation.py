@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from scripts.verify_manual import verify as verify_manual
 from shodan_skill.cli import run
 from shodan_skill.config import Settings
 from shodan_skill.transport import HttpTransport
@@ -127,12 +128,16 @@ def test_account_credit_balance_intents_route_to_api_info() -> None:
 
 def test_markdown_layout_separates_runtime_and_project_documents() -> None:
     root_markdown = {path.name for path in Path(".").glob("*.md")}
-    assert root_markdown == {"README.md", "README_CN.md", "SECURITY.md", "SKILL.md"}
+    assert root_markdown - {"AGENTS.md"} == {"README.md", "README_CN.md", "SECURITY.md", "SKILL.md"}
     assert not re.search(r"[\u4e00-\u9fff]", Path("README.md").read_text(encoding="utf-8"))
     assert re.search(r"[\u4e00-\u9fff]", Path("README_CN.md").read_text(encoding="utf-8"))
     assert not list(Path("references").glob("*_CN.md"))
     assert not list(Path("docs").glob("*.md"))
     assert "docs/" not in Path("SKILL.md").read_text(encoding="utf-8")
+
+
+def test_bilingual_manual_is_complete_and_linked() -> None:
+    assert verify_manual() == []
 
 
 def test_gitignore_excludes_local_credential_files() -> None:
@@ -182,6 +187,18 @@ def test_ci_actions_are_pinned_to_full_release_commits() -> None:
     assert dict(uses) == {
         "actions/checkout": "de0fac2e4500dabe0009e67214ff5f5447ce83dd",
         "actions/setup-python": "a309ff8b426b58ec0e2a45f0f869d46889d02405",
+    }
+
+
+def test_documentation_actions_are_pinned_to_full_release_commits() -> None:
+    workflow = Path(".github/workflows/docs.yml").read_text(encoding="utf-8")
+    uses = re.findall(r"uses:\s+([^@\s]+)@([0-9a-f]{40})", workflow)
+
+    assert dict(uses) == {
+        "actions/checkout": "de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+        "actions/setup-python": "a309ff8b426b58ec0e2a45f0f869d46889d02405",
+        "actions/upload-pages-artifact": "56afc609e74202658d3ffba0e8f6dda462b719fa",
+        "actions/deploy-pages": "d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
     }
 
 

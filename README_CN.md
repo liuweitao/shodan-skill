@@ -6,6 +6,10 @@
 
 [English](README.md) | [中文](README_CN.md)
 
+[完整英文说明书](https://liuweitao.github.io/shodan-skill/) | [完整中文说明书](https://liuweitao.github.io/shodan-skill/zh/)
+
+双语说明书提供按任务组织的指南、命令速查、操作配方和故障排查。本 README 继续作为简洁的项目及安装入口。
+
 ## 已验证范围
 
 2.0.0 版依据 2026-07-27 的官方开发者文档重新枚举并通过离线契约测试覆盖全部 58 个操作：45 个 REST、8 个 Streaming、3 个 Trends 和 2 个 Exploits 操作。它们覆盖主机、搜索、DNS、扫描、告警、通知器、数据集、组织、账户及工具。
@@ -101,6 +105,14 @@ python scripts/install_skill.py --platform hermes
 这些门禁在操作类别重叠时必须累积满足。任何单个环境变量、pytest 参数、已配置密钥或账户权限都不能授权真实扫描、账户变更、流、下载或积分消耗。
 
 CI 在 Linux 上执行一次完整的质量、覆盖率、bundle 漂移和构建门禁，并通过独立矩阵覆盖所有支持的 Python 与操作系统组合。推送 `v2.0.0` 这类版本标签后，发布工作流会先校验标签和全部发布门禁；只有验证成功，才会创建或更新 GitHub Release 并附加已验证制品。
+
+双语说明书使用独立的锁定依赖构建和校验：
+
+```bash
+python scripts/verify_manual.py
+python -m pip install --requirement requirements-docs.txt
+python -m mkdocs build --strict
+```
 
 安全问题请按照根目录的正式英文 [安全策略](SECURITY.md) 私密报告；不要在公开 Issue 中粘贴真实密钥、私有目标或敏感响应。
 

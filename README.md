@@ -6,6 +6,10 @@ This project is not affiliated with, endorsed by, or sponsored by Shodan. Shodan
 
 [English](README.md) | [Chinese](README_CN.md)
 
+[Full documentation](https://liuweitao.github.io/shodan-skill/) | [Chinese documentation](https://liuweitao.github.io/shodan-skill/zh/)
+
+The bilingual user manual contains task-oriented guides, command reference, recipes, and troubleshooting. This README remains the concise project and installation entry point.
+
 ## Verified scope
 
 Version 2.0.0 maps and contract-tests all 58 operations re-enumerated from the official developer documentation on 2026-07-27:
@@ -208,8 +212,16 @@ python -m ruff format --check .
 python -m mypy src/shodan_skill
 python scripts/verify_coverage.py --require-complete
 python scripts/verify_skill.py
+python scripts/verify_manual.py
 python scripts/verify_release.py
 python -m build
+```
+
+Build the bilingual documentation site after installing its pinned dependencies:
+
+```bash
+python -m pip install --requirement requirements-docs.txt
+python -m mkdocs build --strict
 ```
 
 The coverage verifier also runs `pytest --collect-only` and rejects a manifest entry whose operation-specific contract node is missing or reused. GitHub CI covers Python 3.10, 3.12, and 3.14 on Linux, Windows, and macOS. CodeQL, dependency updates, an official-doc drift monitor, release checksums, a CycloneDX SBOM, and GitHub build provenance are configured. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).

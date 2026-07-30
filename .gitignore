@@ -50,6 +50,7 @@ htmlcov/
 junit.xml
 build/
 dist/
+site/
 *.egg-info/
 .eggs/
 *.egg

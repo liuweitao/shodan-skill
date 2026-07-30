@@ -62,6 +62,9 @@ def test_sdist_does_not_ship_live_tests_without_the_repository_gates(tmp_path: P
         assert any(name.endswith("/SECURITY.md") for name in names)
         assert any(name.endswith("/platforms/codex/shodan-skill/SKILL.md") for name in names)
         assert any(name.endswith("/platforms/claude-code/.claude/skills/shodan-skill/SKILL.md") for name in names)
+        assert not any("/manual/" in name for name in names)
+        assert not any(name.endswith("/mkdocs.yml") for name in names)
+        assert not any(name.endswith("/requirements-docs.txt") for name in names)
 
 
 def test_wheel_installs_and_runs_from_an_isolated_environment_offline(tmp_path: Path) -> None:

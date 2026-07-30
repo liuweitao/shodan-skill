@@ -32,6 +32,7 @@ jobs:
       - run: python -m mypy src/shodan_skill
       - run: python scripts/verify_coverage.py --require-complete
       - run: python scripts/verify_skill.py
+      - run: python scripts/verify_manual.py
       - run: python scripts/verify_release.py
       - run: python scripts/build_bundles.py
       - run: git diff --exit-code -- platforms

@@ -63,6 +63,7 @@ def test_every_github_workflow_is_valid_yaml_and_pins_external_actions() -> None
         "ci.yml",
         "codeql.yml",
         "docs-drift.yml",
+        "docs.yml",
         "release.yml",
     }
     for workflow in workflows:

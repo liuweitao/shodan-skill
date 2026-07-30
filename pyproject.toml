@@ -29,7 +29,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/liuweitao/shodan-skill"
-Documentation = "https://github.com/liuweitao/shodan-skill#readme"
+Documentation = "https://liuweitao.github.io/shodan-skill/"
 Repository = "https://github.com/liuweitao/shodan-skill"
 Issues = "https://github.com/liuweitao/shodan-skill/issues"
 Security = "https://github.com/liuweitao/shodan-skill/security/policy"
