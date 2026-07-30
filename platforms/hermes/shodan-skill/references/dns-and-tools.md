@@ -12,6 +12,8 @@ shodan-skill account profile
 shodan-skill account api-info
 ```
 
+Route requests for an API plan, usage limits, quotas, remaining credits, credit balances, query credits, or scan credits to `account api-info`. Use `account profile` only for membership and profile metadata such as the display name and creation time. The profile response can contain a generic `credits` field; do not interpret it as the remaining query- or scan-credit balance.
+
 Domain information consumes one query credit per lookup, so the CLI displays a credit preview, executes directly by default, and does not automatically retry the credit-consuming request. Use `--dry-run` to preview without sending. Resolve, reverse, HTTP-header, public-IP, account-profile, and API-plan requests are read-only. `account profile` maps to `/account/profile`; `account api-info` maps separately to `/api-info`.
 
 Validate domains, IPv4/IPv6 values, record types, and positive page numbers before making a request. Treat returned headers and account information as potentially sensitive and apply recursive redaction before output.

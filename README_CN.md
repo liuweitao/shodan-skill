@@ -42,6 +42,8 @@ shodan-skill --read-timeout 45 --retries 1 host info 8.8.8.8
 
 `host`、`search`、`scan`、`alert`、`notifier`、`query`、`dns`、`tools`、`account`、`stream`、`trends`、`exploits`、`data`、`org` 和 `reference` 分别处理主机、检索、扫描、告警、通知器、共享查询、DNS、工具、账户、实时流、趋势、漏洞利用、企业数据、组织及本地参考。
 
+使用 `shodan-skill account api-info` 查询 API 套餐、用量限制以及剩余查询或扫描积分。`shodan-skill account profile` 仅用于会员和账户资料；其中通用的 `credits` 字段不能作为 API 查询或扫描积分余额。
+
 ```bash
 shodan-skill host info 8.8.8.8
 shodan-skill search hosts "product:nginx" --facets country:5

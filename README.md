@@ -86,7 +86,7 @@ notifier   Notification provider and notifier management
 query      Community saved-query directory
 dns        Domain history, resolve, and reverse lookup
 tools      HTTP headers and caller public IP
-account    Account profile and API-plan information
+account    Account profile, API plan, usage limits, and credit balances
 stream     Banners, ASN, countries, ports, CVEs, alerts, and custom feeds
 trends     Historical search, filters, and facets
 exploits   Exploit search and count
@@ -94,6 +94,8 @@ data       Enterprise datasets, files, and verified downloads
 org        Enterprise organization information and membership
 reference  Local links to current filters, schemas, and Datapedia
 ```
+
+Use `shodan-skill account api-info` for API-plan details, usage limits, and remaining query or scan credits. Use `shodan-skill account profile` only for membership and profile metadata; its generic `credits` field is not the API query- or scan-credit balance.
 
 Examples:
 

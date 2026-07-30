@@ -111,6 +111,19 @@ def test_group_help_is_not_rewritten_as_a_legacy_command(group: str) -> None:
     assert normalize_legacy([group, "--help"]) == ([group, "--help"], None)
 
 
+def test_account_help_routes_credit_balances_to_api_info(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        run(["account", "--help"])
+
+    assert exc_info.value.code == 0
+    help_text = capsys.readouterr().out
+    normalized_help = " ".join(help_text.split())
+    assert "api-info" in normalized_help
+    assert "API plan, usage limits, and remaining query/scan credits" in normalized_help
+    assert "profile" in normalized_help
+    assert "not query or scan credit balances" in normalized_help
+
+
 @pytest.mark.parametrize("option", ["--ports", "--alert"])
 def test_legacy_stream_missing_selector_is_a_usage_error(tmp_path: Path, option: str) -> None:
     code, stdout, stderr = invoke(["stream", option], tmp_path)

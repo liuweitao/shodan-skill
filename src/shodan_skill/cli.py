@@ -281,10 +281,18 @@ def build_parser() -> argparse.ArgumentParser:
     dns_reverse = _leaf(dns_commands, "reverse", help="Reverse-resolve comma-separated IPs; read-only")
     dns_reverse.add_argument("ips")
 
-    account = _leaf(groups, "account", help="Account and plan")
+    account = _leaf(groups, "account", help="Account profile, API plan, usage limits, and credit balances")
     account_commands = account.add_subparsers(dest="action", required=True)
-    _leaf(account_commands, "profile", help="Read account membership/profile details")
-    _leaf(account_commands, "api-info", help="Read API plan and remaining credit information")
+    _leaf(
+        account_commands,
+        "profile",
+        help="Read membership/profile metadata; not query or scan credit balances",
+    )
+    _leaf(
+        account_commands,
+        "api-info",
+        help="Read API plan, usage limits, and remaining query/scan credits",
+    )
 
     tools = _leaf(groups, "tools", help="Utility operations")
     tools_commands = tools.add_subparsers(dest="action", required=True)

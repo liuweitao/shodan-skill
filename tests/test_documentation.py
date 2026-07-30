@@ -109,6 +109,22 @@ def test_readme_release_claims_and_text_are_safe() -> None:
         assert group in readme
 
 
+def test_account_credit_balance_intents_route_to_api_info() -> None:
+    skill = Path("SKILL.md").read_text(encoding="utf-8")
+    reference = Path("references/dns-and-tools.md").read_text(encoding="utf-8")
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_cn = Path("README_CN.md").read_text(encoding="utf-8")
+
+    for text in (skill, reference, readme):
+        assert "account api-info" in text
+        assert "account profile" in text
+        assert "query" in text and "scan" in text and "credit" in text
+    assert "remaining-credit" in skill and "credit-balance" in skill
+    assert "generic `credits` field" in reference
+    assert "剩余查询或扫描积分" in readme_cn
+    assert "通用的 `credits` 字段不能作为" in readme_cn
+
+
 def test_markdown_layout_separates_runtime_and_project_documents() -> None:
     root_markdown = {path.name for path in Path(".").glob("*.md")}
     assert root_markdown == {"README.md", "README_CN.md", "SECURITY.md", "SKILL.md"}
