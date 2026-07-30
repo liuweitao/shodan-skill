@@ -9,15 +9,15 @@ from scripts.verify_release import package_versions, verify_release
 
 ROOT = Path(__file__).resolve().parents[1]
 PINNED_ACTION = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*@[0-9a-f]{40}$")
-REVIEWED_ACTION_COMMITS = {
-    "actions/attest-build-provenance": "43d14bc2b83dec42d39ecae14e916627a18bb661",
-    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
-    "actions/deploy-pages": "d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
-    "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
-    "actions/upload-artifact": "b7c566a772e6b6bfb58ed0dc250532a479d7789f",
-    "actions/upload-pages-artifact": "56afc609e74202658d3ffba0e8f6dda462b719fa",
-    "github/codeql-action/analyze": "adfda868f108ac4222129de456ea554034a27db7",
-    "github/codeql-action/init": "adfda868f108ac4222129de456ea554034a27db7",
+EXPECTED_ACTIONS = {
+    "actions/attest-build-provenance",
+    "actions/checkout",
+    "actions/deploy-pages",
+    "actions/setup-python",
+    "actions/upload-artifact",
+    "actions/upload-pages-artifact",
+    "github/codeql-action/analyze",
+    "github/codeql-action/init",
 }
 
 
@@ -88,9 +88,9 @@ def test_every_github_workflow_is_valid_yaml_and_pins_external_actions() -> None
             action, commit = value.split("@", maxsplit=1)
             observed.setdefault(action, set()).add(commit)
 
-    assert observed.keys() == REVIEWED_ACTION_COMMITS.keys()
-    for action, expected in REVIEWED_ACTION_COMMITS.items():
-        assert observed[action] == {expected}, action
+    assert observed.keys() == EXPECTED_ACTIONS
+    assert all(len(commits) == 1 for commits in observed.values())
+    assert observed["github/codeql-action/init"] == observed["github/codeql-action/analyze"]
 
 
 def test_ci_runs_branch_pushes_only_on_master_and_checks_pull_requests() -> None:
@@ -144,11 +144,13 @@ def test_ci_separates_quality_and_compatibility_work_without_duplicate_builds() 
 
 def test_dependabot_and_private_security_reporting_are_configured() -> None:
     dependabot = yaml.safe_load(ROOT.joinpath(".github", "dependabot.yml").read_text(encoding="utf-8"))
-    assert {update["package-ecosystem"] for update in dependabot["updates"]} == {
+    updates = {update["package-ecosystem"]: update for update in dependabot["updates"]}
+    assert updates.keys() == {
         "pip",
         "github-actions",
     }
-    assert all(update["schedule"]["interval"] == "weekly" for update in dependabot["updates"])
+    assert all(update["schedule"]["interval"] == "weekly" for update in updates.values())
+    assert updates["github-actions"]["groups"]["github-actions"]["patterns"] == ["*"]
 
     security = ROOT.joinpath("SECURITY.md").read_text(encoding="utf-8")
     assert "private vulnerability reporting" in security
