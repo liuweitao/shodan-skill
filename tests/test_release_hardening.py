@@ -13,11 +13,13 @@ EXPECTED_ACTIONS = {
     "actions/attest-build-provenance",
     "actions/checkout",
     "actions/deploy-pages",
+    "actions/download-artifact",
     "actions/setup-python",
     "actions/upload-artifact",
     "actions/upload-pages-artifact",
     "github/codeql-action/analyze",
     "github/codeql-action/init",
+    "pypa/gh-action-pypi-publish",
 }
 
 
@@ -34,15 +36,15 @@ def _write_release_fixture(root: Path, project_version: str, package_version: st
 
 
 def test_release_versions_match_and_helper_supports_python_310() -> None:
-    assert package_versions() == ("2.0.0", "2.0.0")
-    assert verify_release(tag="v2.0.0") == []
+    assert package_versions() == ("2.0.1", "2.0.1")
+    assert verify_release(tag="v2.0.1") == []
     source = ROOT.joinpath("scripts", "verify_release.py").read_text(encoding="utf-8")
     assert "import tomllib" not in source
 
 
 def test_release_verifier_rejects_mismatch_bad_shape_and_wrong_tag(tmp_path: Path) -> None:
     mismatch = tmp_path / "mismatch"
-    _write_release_fixture(mismatch, "2.0.0", "2.0.1")
+    _write_release_fixture(mismatch, "2.0.1", "2.0.2")
     assert "does not match package version" in verify_release(root=mismatch)[0]
 
     bad_shape = tmp_path / "bad-shape"
@@ -56,7 +58,7 @@ def test_release_verifier_rejects_mismatch_bad_shape_and_wrong_tag(tmp_path: Pat
 
 def test_project_metadata_exposes_security_and_release_inputs() -> None:
     pyproject = ROOT.joinpath("pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "2.0.0"' in pyproject
+    assert 'version = "2.0.1"' in pyproject
     assert 'Security = "https://github.com/liuweitao/shodan-skill/security/policy"' in pyproject
     assert '"cyclonedx-bom>=7.3,<8"' in pyproject
     assert '"Programming Language :: Python :: 3.10"' in pyproject
@@ -103,10 +105,18 @@ def test_ci_runs_branch_pushes_only_on_master_and_checks_pull_requests() -> None
 
 def test_supply_chain_and_documentation_workflows_have_expected_gates() -> None:
     release = ROOT.joinpath(".github", "workflows", "release.yml").read_text(encoding="utf-8")
+    parsed_release = yaml.load(release, Loader=yaml.BaseLoader)
+    build_job = parsed_release["jobs"]["build"]
+    pypi_job = parsed_release["jobs"]["publish-pypi"]
+    github_job = parsed_release["jobs"]["publish-github-release"]
+
     assert "tags:" in release and '"v*"' in release
     assert "types: [published]" not in release
-    assert "id-token: write" in release
-    assert "attestations: write" in release
+    assert build_job["permissions"] == {
+        "attestations": "write",
+        "contents": "read",
+        "id-token": "write",
+    }
     assert "python -m pip check" in release
     assert "python -m pytest --cov=shodan_skill --cov-report=term-missing --cov-fail-under=90" in release
     assert "cyclonedx-py environment" in release
@@ -116,6 +126,21 @@ def test_supply_chain_and_documentation_workflows_have_expected_gates() -> None:
     assert "gh release create" in release
     assert "gh release upload" in release
     assert "twine upload" not in release
+    assert "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33" in release
+    assert "skip-existing" not in release
+    assert pypi_job["needs"] == "build"
+    assert pypi_job["environment"] == {
+        "name": "pypi",
+        "url": "https://pypi.org/p/shodan-skill",
+    }
+    assert pypi_job["permissions"] == {"id-token": "write"}
+    assert all("run" not in step for step in pypi_job["steps"])
+    assert github_job["needs"] == ["build", "publish-pypi"]
+    assert github_job["permissions"] == {"contents": "write"}
+    python_distributions = next(
+        step for step in build_job["steps"] if step.get("with", {}).get("name") == "shodan-skill-python-distributions"
+    )
+    assert python_distributions["with"]["path"].splitlines() == ["dist/*.whl", "dist/*.tar.gz"]
 
     codeql = ROOT.joinpath(".github", "workflows", "codeql.yml").read_text(encoding="utf-8")
     assert "github/codeql-action/init@" in codeql

@@ -10,16 +10,17 @@ Natural-language request
   -> Shodan services
 ```
 
-Install the Python CLI first. Then install one generated Skill bundle into the platform discovery layout:
+Install the Python CLI first, then install one generated Skill bundle into the platform discovery layout:
 
 ```bash
+python -m pip install shodan-skill
 python scripts/install_skill.py --platform codex
 python scripts/install_skill.py --platform openclaw
 python scripts/install_skill.py --platform claude-code
 python scripts/install_skill.py --platform hermes
 ```
 
-The installer prompts before replacing an existing bundle. Use `--yes` only when replacement is intended. Platform bundles are generated from the root `SKILL.md` and focused references; do not edit a generated bundle by hand.
+The repository-root `SKILL.md` is the canonical entry for community directories. The files under `platforms/` are generated from that Skill and focused references; do not edit or submit them as independent Skills. The installer prompts before replacing an existing bundle. Use `--yes` only when replacement is intended.
 
 ## Request behavior
 

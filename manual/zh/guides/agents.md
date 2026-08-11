@@ -13,13 +13,14 @@
 先安装 Python CLI，再把生成的 Skill Bundle 安装到平台发现目录：
 
 ```bash
+python -m pip install shodan-skill
 python scripts/install_skill.py --platform codex
 python scripts/install_skill.py --platform openclaw
 python scripts/install_skill.py --platform claude-code
 python scripts/install_skill.py --platform hermes
 ```
 
-替换已有 Bundle 前，安装程序会请求确认。仅在确实需要替换时使用 `--yes`。平台 Bundle 由根目录 `SKILL.md` 和聚焦参考文件生成，不得手工修改生成副本。
+仓库根目录的 `SKILL.md` 是社区目录收录的规范入口。`platforms/` 中的文件由该 Skill 和聚焦参考生成，不得手工修改或作为多个独立 Skill 提交。替换已有 Bundle 前，安装程序会请求确认；仅在确实需要替换时使用 `--yes`。
 
 ## 请求行为
 

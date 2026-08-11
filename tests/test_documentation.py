@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import httpx
@@ -54,7 +55,13 @@ def test_readme_release_claims_and_text_are_safe() -> None:
     skill = Path("SKILL.md").read_text(encoding="utf-8")
     assert "not affiliated with, endorsed by, or sponsored by Shodan" in readme
     assert "非官方" in readme_cn
-    assert "2.0.0" in readme
+    assert "2.0.1" in readme
+    assert "python -m pip install shodan-skill" in readme
+    assert "python -m pip install shodan-skill" in readme_cn
+    assert "img.shields.io/pypi/v/shodan-skill.svg" in readme
+    assert "img.shields.io/pypi/v/shodan-skill.svg" in readme_cn
+    assert readme.index("python -m pip install shodan-skill") < readme.index("## Verified scope")
+    assert readme_cn.index("python -m pip install shodan-skill") < readme_cn.index("## 已验证范围")
     assert "major portable rewrite" in readme
     assert "重大可移植重构" in readme_cn
     assert "58 operations" in readme
@@ -74,6 +81,13 @@ def test_readme_release_claims_and_text_are_safe() -> None:
     assert "SHODAN_SAFETY_MODE=strict" in readme
     assert "SHODAN_SAFETY_MODE=strict" in readme_cn
     assert "SHODAN_SAFETY_MODE=strict" in safety
+    for path in (
+        "manual/en/getting-started/installation.md",
+        "manual/en/getting-started/quickstart.md",
+        "manual/zh/getting-started/installation.md",
+        "manual/zh/getting-started/quickstart.md",
+    ):
+        assert "python -m pip install shodan-skill" in Path(path).read_text(encoding="utf-8")
     for gate in (
         "SHODAN_LIVE_TESTS=1",
         "--allow-live-shodan",
@@ -127,12 +141,24 @@ def test_account_credit_balance_intents_route_to_api_info() -> None:
 
 
 def test_markdown_layout_separates_runtime_and_project_documents() -> None:
-    root_markdown = {path.name for path in Path(".").glob("*.md")}
-    assert root_markdown - {"AGENTS.md"} == {"README.md", "README_CN.md", "SECURITY.md", "SKILL.md"}
+    tracked_markdown = subprocess.run(
+        ["git", "ls-files", "--", "*.md"],
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.splitlines()
+    tracked_root_markdown = {Path(path).name for path in tracked_markdown if Path(path).parent == Path(".")}
+    assert tracked_root_markdown == {"README.md", "README_CN.md", "SECURITY.md", "SKILL.md"}
     assert not re.search(r"[\u4e00-\u9fff]", Path("README.md").read_text(encoding="utf-8"))
     assert re.search(r"[\u4e00-\u9fff]", Path("README_CN.md").read_text(encoding="utf-8"))
     assert not list(Path("references").glob("*_CN.md"))
-    assert not list(Path("docs").glob("*.md"))
+    tracked_docs = subprocess.run(
+        ["git", "ls-files", "--", "docs/*.md"],
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.splitlines()
+    assert tracked_docs == []
     assert "docs/" not in Path("SKILL.md").read_text(encoding="utf-8")
 
 

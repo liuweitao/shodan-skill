@@ -2,16 +2,17 @@
 
 ## 1. Install
 
-Python 3.10 or newer is required. From a checked-out repository:
+Python 3.10 or newer is required. Install the current release from PyPI:
 
 ```bash
-python -m pip install .
+python -m pip install shodan-skill
 shodan-skill --version
 ```
 
-For development, install the editable package and test tools:
+For a reviewed local checkout or development environment:
 
 ```bash
+python -m pip install .
 python -m pip install -e ".[dev]"
 ```
 

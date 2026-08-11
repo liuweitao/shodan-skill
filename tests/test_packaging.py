@@ -34,7 +34,7 @@ def test_wheel_build_and_contents_are_offline(tmp_path: Path) -> None:
             "shodan_skill/commands/validation.py",
         } <= names
         assert not any(name.startswith("tests/") for name in names)
-        entry_points = archive.read("shodan_skill-2.0.0.dist-info/entry_points.txt").decode()
+        entry_points = archive.read("shodan_skill-2.0.1.dist-info/entry_points.txt").decode()
         assert "shodan-skill = shodan_skill.cli:main" in entry_points
 
 
@@ -122,7 +122,7 @@ def test_wheel_installs_and_runs_from_an_isolated_environment_offline(tmp_path: 
     assert install_result.returncode == 0, install_result.stderr
     assert console.is_file()
 
-    for option, expected in (("--help", "Portable CLI"), ("--version", "shodan-skill 2.0.0")):
+    for option, expected in (("--help", "Portable CLI"), ("--version", "shodan-skill 2.0.1")):
         result = subprocess.run(
             [str(console), option],
             cwd=tmp_path,

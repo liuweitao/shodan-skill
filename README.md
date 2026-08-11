@@ -1,5 +1,10 @@
 # Shodan Skill
 
+[![PyPI version](https://img.shields.io/pypi/v/shodan-skill.svg)](https://pypi.org/project/shodan-skill/)
+[![Python versions](https://img.shields.io/pypi/pyversions/shodan-skill.svg)](https://pypi.org/project/shodan-skill/)
+[![CI](https://github.com/liuweitao/shodan-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/liuweitao/shodan-skill/actions/workflows/ci.yml)
+[![Documentation](https://github.com/liuweitao/shodan-skill/actions/workflows/docs.yml/badge.svg)](https://github.com/liuweitao/shodan-skill/actions/workflows/docs.yml)
+
 An unofficial, safety-focused command-line client and universal Agent Skill for the documented Shodan APIs. One portable `shodan-skill` implementation supports OpenClaw, Codex, Claude Code, and Hermes.
 
 This project is not affiliated with, endorsed by, or sponsored by Shodan. Shodan names and service references are used only to describe API compatibility.
@@ -10,16 +15,33 @@ This project is not affiliated with, endorsed by, or sponsored by Shodan. Shodan
 
 The bilingual user manual contains task-oriented guides, command reference, recipes, and troubleshooting. This README remains the concise project and installation entry point.
 
+## Install and run a read-only lookup
+
+Python 3.10 or newer is required. Install the CLI from PyPI:
+
+```bash
+python -m pip install shodan-skill
+shodan-skill --version
+```
+
+After configuring `SHODAN_API_KEY` or an official Shodan CLI key file, run a read-only host lookup:
+
+```bash
+shodan-skill host info 8.8.8.8
+```
+
+The Agent Skill and platform bundles remain separate from the Python package; see [Agent platform bundles](#agent-platform-bundles) for platform installation.
+
 ## Verified scope
 
-Version 2.0.0 maps and contract-tests all 58 operations re-enumerated from the official developer documentation on 2026-07-27:
+Version 2.0.1 maps and contract-tests all 58 operations re-enumerated from the official developer documentation on 2026-07-27:
 
 - 45 REST operations covering hosts, search, DNS, scans, alerts, notifiers, datasets, organizations, account, and tools
 - 8 Streaming operations with JSON Lines and SSE handling
 - 3 Trends operations routed to the separate Trends service
 - 2 Exploits operations routed to the Exploits service
 
-Version 2.0.0 is the major portable rewrite following the earlier OpenClaw-only v1 release. Installation, command structure, output, API coverage, and safety behavior have changed; migrate existing workflows to the grouped CLI documented below.
+Version 2.0.0 was the major portable rewrite following the earlier OpenClaw-only v1 release. Installation, command structure, output, API coverage, and safety behavior changed; migrate existing workflows to the grouped CLI documented below.
 
 The checked-in [official API snapshot](references/official-api-snapshot.yaml) records each operation, source URL, retrieval date, and normalized document hash. The coverage manifest maps every operation to a unique CLI command and a collected pytest contract node. The default suite is deterministic and offline: it does not require an API key, spend credits, scan a target, open a live stream, download live data, or mutate an account.
 
@@ -30,14 +52,15 @@ Raw documented HTTP APIs are canonical. See the [coverage manifest](references/a
 Python 3.10 or newer is required.
 
 ```bash
-python -m pip install .
+python -m pip install shodan-skill
 shodan-skill --version
 shodan-skill --help
 ```
 
-For development:
+For a reviewed local checkout or development environment:
 
 ```bash
+python -m pip install .
 python -m pip install -e ".[dev]"
 ```
 
@@ -182,6 +205,8 @@ A scheduled GitHub workflow performs the drift check weekly. `shodan-skill refer
 
 ## Agent platform bundles
 
+The repository-root [SKILL.md](SKILL.md) is the canonical directory entry. Files under `platforms/` are generated installation bundles and must not be submitted as independent Skills.
+
 Generate and verify every adapter from the root `SKILL.md`:
 
 ```bash
@@ -226,7 +251,7 @@ python -m mkdocs build --strict
 
 The coverage verifier also runs `pytest --collect-only` and rejects a manifest entry whose operation-specific contract node is missing or reused. GitHub CI covers Python 3.10, 3.12, and 3.14 on Linux, Windows, and macOS. CodeQL, dependency updates, an official-doc drift monitor, release checksums, a CycloneDX SBOM, and GitHub build provenance are configured. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
-CI runs the complete quality, coverage, bundle-drift, and packaging gate once on Linux, while a separate matrix runs compatibility tests across all supported Python and operating-system combinations. Pushing a version tag such as `v2.0.0` starts the release workflow; the workflow validates the tag and all release gates before it creates or updates the GitHub Release and attaches the verified artifacts.
+CI runs the complete quality, coverage, bundle-drift, and packaging gate once on Linux, while a separate matrix runs compatibility tests across all supported Python and operating-system combinations. Pushing a version tag such as `v2.0.1` starts the release workflow; after validating the tag and all release gates, an isolated Trusted Publishing job uploads the Python distributions to PyPI before the workflow creates or updates the GitHub Release and attaches the verified artifacts.
 
 Live verification is disabled by default and requires explicit user authorization plus independent environment and pytest gates:
 

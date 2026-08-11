@@ -2,16 +2,17 @@
 
 ## 1. 安装
 
-需要 Python 3.10 或更高版本。在已经检出的仓库中运行：
+需要 Python 3.10 或更高版本。从 PyPI 安装当前版本：
 
 ```bash
-python -m pip install .
+python -m pip install shodan-skill
 shodan-skill --version
 ```
 
-开发环境可以安装可编辑包和测试工具：
+经过审阅的本地仓库或开发环境可以使用：
 
 ```bash
+python -m pip install .
 python -m pip install -e ".[dev]"
 ```
 

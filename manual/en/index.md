@@ -13,7 +13,7 @@ This project is not affiliated with, endorsed by, or sponsored by Shodan. You ne
 
 ## What the project covers
 
-Version 2.0.0 maps and contract-tests the 58 operations re-enumerated from Shodan's public developer documentation on 2026-07-27: 45 REST, 8 Streaming, 3 Trends, and 2 Exploits operations. The CLI also provides a verified dataset-download workflow and local reference commands.
+Version 2.0.1 maps and contract-tests the 58 operations re-enumerated from Shodan's public developer documentation on 2026-07-27: 45 REST, 8 Streaming, 3 Trends, and 2 Exploits operations. The CLI also provides a verified dataset-download workflow and local reference commands.
 
 The raw documented HTTP APIs are canonical. The repository's machine-readable coverage manifest maps each documented operation to one CLI command and one mocked HTTP contract test. The official Python SDK is a compatibility reference, not a limit on HTTP coverage.
 

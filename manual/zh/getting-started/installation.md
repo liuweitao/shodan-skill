@@ -6,13 +6,15 @@
 - Shodan 账户和 API Key
 - 请求操作所需的积分或服务权限
 
-从本地仓库安装：
+从 PyPI 安装当前版本：
 
 ```bash
-python -m pip install .
+python -m pip install shodan-skill
 shodan-skill --help
 shodan-skill --version
 ```
+
+从经过审阅的本地仓库安装时，把第一条命令替换为 `python -m pip install .`；开发环境可以使用 `python -m pip install -e ".[dev]"`。
 
 安装后的命令不依赖 Skill 目录的位置。CLI Python 包和 Agent 平台 Bundle 应分别安装。
 
@@ -37,7 +39,13 @@ shodan-skill account profile
 
 ## 升级和卸载
 
-继续使用最初经过信任的安装来源。从本地仓库升级时，应先拉取并审阅变更。卸载命令为：
+继续使用最初经过信任的安装来源。PyPI 安装可以使用以下命令升级：
+
+```bash
+python -m pip install --upgrade shodan-skill
+```
+
+从本地仓库升级时，应先拉取并审阅变更。卸载命令为：
 
 ```bash
 python -m pip uninstall shodan-skill

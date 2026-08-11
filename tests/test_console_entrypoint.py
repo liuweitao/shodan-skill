@@ -32,7 +32,7 @@ def test_installed_console_help_and_version(tmp_path: Path) -> None:
     assert "Portable CLI" in help_result.stdout
     version_result = run_console("--version", home=tmp_path)
     assert version_result.returncode == 0
-    assert version_result.stdout.strip() == "shodan-skill 2.0.0"
+    assert version_result.stdout.strip() == "shodan-skill 2.0.1"
 
 
 def test_installed_console_group_help_is_local_and_shows_subcommands(tmp_path: Path) -> None:

@@ -6,13 +6,15 @@
 - A Shodan account and API key
 - Credits or service entitlements required by the requested operation
 
-Install from a local checkout:
+Install the current release from PyPI:
 
 ```bash
-python -m pip install .
+python -m pip install shodan-skill
 shodan-skill --help
 shodan-skill --version
 ```
+
+For a reviewed local checkout, replace the first command with `python -m pip install .`. Development environments can use `python -m pip install -e ".[dev]"`.
 
 The installed command does not depend on the location of the Skill directory. Install the CLI package separately from any agent-platform bundle.
 
@@ -37,7 +39,13 @@ Exit code `3` means authentication failed. Exit code `4` normally means the key 
 
 ## Upgrade or remove
 
-Use the same package source you originally trusted. For a local checkout, pull and review the changes before reinstalling. Remove the package with:
+Use the same package source you originally trusted. Upgrade a PyPI installation with:
+
+```bash
+python -m pip install --upgrade shodan-skill
+```
+
+For a local checkout, pull and review the changes before reinstalling. Remove the package with:
 
 ```bash
 python -m pip uninstall shodan-skill

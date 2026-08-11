@@ -1,5 +1,10 @@
 # Shodan Skill
 
+[![PyPI 版本](https://img.shields.io/pypi/v/shodan-skill.svg)](https://pypi.org/project/shodan-skill/)
+[![Python 版本](https://img.shields.io/pypi/pyversions/shodan-skill.svg)](https://pypi.org/project/shodan-skill/)
+[![CI](https://github.com/liuweitao/shodan-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/liuweitao/shodan-skill/actions/workflows/ci.yml)
+[![文档](https://github.com/liuweitao/shodan-skill/actions/workflows/docs.yml/badge.svg)](https://github.com/liuweitao/shodan-skill/actions/workflows/docs.yml)
+
 一个非官方、以安全为先的 Shodan 命令行客户端及通用 Agent Skill。OpenClaw、Codex、Claude Code 与 Hermes 共用同一个可移植的 `shodan-skill` 实现。
 
 本项目与 Shodan 不存在隶属、认可、赞助或官方合作关系；Shodan 名称及服务引用仅用于说明 API 兼容性。
@@ -10,11 +15,28 @@
 
 双语说明书提供按任务组织的指南、命令速查、操作配方和故障排查。本 README 继续作为简洁的项目及安装入口。
 
+## 安装并执行只读查询
+
+需要 Python 3.10 或更高版本。从 PyPI 安装 CLI：
+
+```bash
+python -m pip install shodan-skill
+shodan-skill --version
+```
+
+配置 `SHODAN_API_KEY` 或 Shodan 官方 CLI 密钥文件后，可以执行只读主机查询：
+
+```bash
+shodan-skill host info 8.8.8.8
+```
+
+Agent Skill 与平台 Bundle 仍独立于 Python 包安装，具体入口见[文档漂移、平台与测试](#文档漂移平台与测试)。
+
 ## 已验证范围
 
-2.0.0 版依据 2026-07-27 的官方开发者文档重新枚举并通过离线契约测试覆盖全部 58 个操作：45 个 REST、8 个 Streaming、3 个 Trends 和 2 个 Exploits 操作。它们覆盖主机、搜索、DNS、扫描、告警、通知器、数据集、组织、账户及工具。
+2.0.1 版依据 2026-07-27 的官方开发者文档重新枚举并通过离线契约测试覆盖全部 58 个操作：45 个 REST、8 个 Streaming、3 个 Trends 和 2 个 Exploits 操作。它们覆盖主机、搜索、DNS、扫描、告警、通知器、数据集、组织、账户及工具。
 
-2.0.0 是继早期 OpenClaw 专用 v1 版本之后的重大可移植重构。安装方式、命令结构、输出、API 覆盖和安全行为均有变化；现有工作流应迁移到下文记录的分组 CLI。
+2.0.0 是继早期 OpenClaw 专用 v1 版本之后的重大可移植重构。该版本改变了安装方式、命令结构、输出、API 覆盖和安全行为；现有工作流应迁移到下文记录的分组 CLI。
 
 [官方 API 快照](references/official-api-snapshot.yaml) 记录操作、来源、获取日期和规范化哈希；[覆盖清单](references/api-coverage.yaml) 把每个操作映射到唯一 CLI 命令及 pytest 契约节点。默认测试完全离线，不需要 API 密钥，也不会消耗积分、扫描目标、打开真实数据流、下载数据或修改账户。
 
@@ -25,12 +47,12 @@
 需要 Python 3.10 或更高版本：
 
 ```bash
-python -m pip install .
+python -m pip install shodan-skill
 shodan-skill --version
 shodan-skill --help
 ```
 
-开发安装使用 `python -m pip install -e ".[dev]"`。通过 `SHODAN_API_KEY` 提供密钥，也可复用 `~/.shodan/api_key` 或 `~/.config/shodan/api_key`；两者同时存在时优先使用旧路径。不要把密钥写入源代码、提示词、测试夹具或可能被记录的命令参数。
+经过审阅的本地仓库可以使用 `python -m pip install .`，开发安装使用 `python -m pip install -e ".[dev]"`。通过 `SHODAN_API_KEY` 提供密钥，也可复用 `~/.shodan/api_key` 或 `~/.config/shodan/api_key`；两者同时存在时优先使用旧路径。不要把密钥写入源代码、提示词、测试夹具或可能被记录的命令参数。
 
 ## 运行控制
 
@@ -81,6 +103,8 @@ API 密钥、凭据字段、Bearer 令牌、认证头、Cookie、通知器秘密
 
 `python scripts/refresh_official_snapshot.py --check` 只读取官方开发者网页，不调用 Shodan API。确认官方文档变化后，使用 `--write` 更新快照，再审查覆盖清单并运行 `python scripts/verify_coverage.py --require-complete`。
 
+仓库根目录的 [SKILL.md](SKILL.md) 是对外目录收录的规范入口；`platforms/` 中的文件是生成的安装 Bundle，不得作为多个独立 Skill 重复提交。
+
 平台适配器由根目录的规范 `SKILL.md` 生成：
 
 ```bash
@@ -104,7 +128,7 @@ python scripts/install_skill.py --platform hermes
 
 这些门禁在操作类别重叠时必须累积满足。任何单个环境变量、pytest 参数、已配置密钥或账户权限都不能授权真实扫描、账户变更、流、下载或积分消耗。
 
-CI 在 Linux 上执行一次完整的质量、覆盖率、bundle 漂移和构建门禁，并通过独立矩阵覆盖所有支持的 Python 与操作系统组合。推送 `v2.0.0` 这类版本标签后，发布工作流会先校验标签和全部发布门禁；只有验证成功，才会创建或更新 GitHub Release 并附加已验证制品。
+CI 在 Linux 上执行一次完整的质量、覆盖率、bundle 漂移和构建门禁，并通过独立矩阵覆盖所有支持的 Python 与操作系统组合。推送 `v2.0.1` 这类版本标签后，发布工作流会校验标签和全部发布门禁，由隔离的 Trusted Publishing 作业把 Python 制品上传到 PyPI，然后才创建或更新 GitHub Release 并附加已验证制品。
 
 双语说明书使用独立的锁定依赖构建和校验：
 

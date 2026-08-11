@@ -329,6 +329,6 @@ def test_verify_rejects_unreferenced_bundle_files_and_stale_metadata(tmp_path: P
 
     extra.unlink()
     metadata = root / "platforms" / "openclaw" / "shodan-skill" / "openclaw.yaml"
-    metadata.write_text(metadata.read_text(encoding="utf-8").replace('version: "2.0.0"', 'version: "9.9.9"'))
+    metadata.write_text(metadata.read_text(encoding="utf-8").replace('version: "2.0.1"', 'version: "9.9.9"'))
     with pytest.raises(ValueError, match="metadata"):
         verify(root)

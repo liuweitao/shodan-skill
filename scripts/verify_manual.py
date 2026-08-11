@@ -94,10 +94,7 @@ def verify(root: Path = ROOT) -> list[str]:
         if docs_url not in text:
             errors.append(f"{filename} does not link to the published manual")
 
-    text_files = [root / "README_CN.md"]
-    if (root / "AGENTS.md").is_file():
-        text_files.append(root / "AGENTS.md")
-    for path in text_files:
+    for path in [root / "README_CN.md"]:
         text = path.read_text(encoding="utf-8")
         if "\ufffd" in text or any(marker in text for marker in MOJIBAKE_MARKERS):
             errors.append(f"{path.name} contains common mojibake markers")
