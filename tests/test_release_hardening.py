@@ -137,6 +137,10 @@ def test_supply_chain_and_documentation_workflows_have_expected_gates() -> None:
     assert all("run" not in step for step in pypi_job["steps"])
     assert github_job["needs"] == ["build", "publish-pypi"]
     assert github_job["permissions"] == {"contents": "write"}
+    github_release_step = next(
+        step for step in github_job["steps"] if step.get("name") == "Publish the verified GitHub Release"
+    )
+    assert github_release_step["env"]["GH_REPO"] == "${{ github.repository }}"
     python_distributions = next(
         step for step in build_job["steps"] if step.get("with", {}).get("name") == "shodan-skill-python-distributions"
     )

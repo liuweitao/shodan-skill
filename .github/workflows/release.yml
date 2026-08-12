@@ -104,6 +104,7 @@ jobs:
           path: dist/
       - name: Publish the verified GitHub Release
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
