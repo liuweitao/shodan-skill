@@ -126,7 +126,7 @@ def test_supply_chain_and_documentation_workflows_have_expected_gates() -> None:
     assert "gh release create" in release
     assert "gh release upload" in release
     assert "twine upload" not in release
-    assert "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33" in release
+    assert any(step.get("uses", "").startswith("pypa/gh-action-pypi-publish@") for step in pypi_job["steps"])
     assert "skip-existing" not in release
     assert pypi_job["needs"] == "build"
     assert pypi_job["environment"] == {

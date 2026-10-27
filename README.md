@@ -19,6 +19,9 @@ The bilingual user manual contains task-oriented guides, command reference, reci
 
 Python 3.10 or newer is required. Install the CLI from PyPI:
 
+Use a maintained Python release with current security patches. Existing environments must also update
+their certificate bundles; see the [October 2026 security guidance](SECURITY.md#october-2026-review).
+
 ```bash
 python -m pip install shodan-skill
 shodan-skill --version
