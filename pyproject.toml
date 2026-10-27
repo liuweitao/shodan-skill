@@ -24,6 +24,7 @@ classifiers = [
   "Topic :: System :: Networking",
 ]
 dependencies = [
+  "certifi>=2026.10.19",
   "httpx>=0.28,<0.29",
 ]
 

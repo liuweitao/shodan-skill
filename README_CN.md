@@ -19,6 +19,9 @@
 
 需要 Python 3.10 或更高版本。从 PyPI 安装 CLI：
 
+建议使用仍受维护并已安装最新安全补丁的 Python。现有环境还需要更新证书包，详见
+[2026 年 10 月安全核查与升级说明](SECURITY.md#october-2026-review)。
+
 ```bash
 python -m pip install shodan-skill
 shodan-skill --version
