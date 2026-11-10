@@ -70,17 +70,21 @@ The approved policy is implemented by `dependabot-automerge.yml` and `docs-drift
 recorded in `.github/maintenance-settings.json` and must be applied by a credential with Administration:write
 and Actions:write permissions, or in the corresponding GitHub settings pages:
 
-1. Enable `allow_auto_merge`. Protect `master`, including administrators, with strict/up-to-date required checks
+1. Enable `allow_auto_merge`. Convert the classic `master` protection to an active branch ruleset, leave its
+   bypass list empty (including administrators), and retain strict/up-to-date required checks
    `Required CI`, `Build bilingual manual`, `Analyze Python` (GitHub Actions app ID 15368), and `CodeQL` (GitHub
-   Code Scanning app ID 57789). Require conversation resolution; block force pushes and branch deletion.
+   Code Scanning app ID 57789). Require PR conversation resolution (zero mandatory approvals is sufficient);
+   enable deletion and non-fast-forward protection. The exact ruleset is recorded in the settings JSON.
 2. Keep default workflow permissions read-only and enable Actions to create pull requests. This GitHub setting
    is named “Allow GitHub Actions to create and approve pull requests”; none of these workflows approves PRs.
-   Only the two specific automation jobs declare their required contents/PR write permissions.
+   The two maintenance jobs and the owner-approved identity audit declare their required contents/PR write permissions.
 3. The Dependabot workflow handles same-repository, non-draft PRs targeting the default branch. It never checks
    out PR code. The pinned metadata action verifies Dependabot identity and signed commits. Only verified
    semver minor/patch updates in the configured ecosystems, without maintainer changes, can queue auto-merge.
 4. Before queueing `gh pr merge --auto --squash --match-head-commit`, the workflow reads effective protection
-   through GraphQL and requires every setting and check source above. Missing, unreadable, or weakened
+   through Metadata-readable REST rules endpoints and requires an active no-bypass ruleset and every setting
+   and check source above. Classic protection details require Administration:read, which GITHUB_TOKEN lacks.
+   Missing, unreadable, or weakened
    protection fails closed. Major upgrades and unknown metadata remain manual. Native branch protection
    enforces the full current checks before a merge can happen.
 
@@ -90,3 +94,10 @@ and [workflow event/token rules](https://docs.github.com/en/actions/how-tos/writ
 Automatic source-code fixes, widening failing assertions, live Shodan calls, credit-consuming operations,
 major dependency upgrades, and releases stay outside this policy. Release publishing retains the existing
 version-tag and environment gates.
+
+The `Audit maintenance protection` job performs read-only API operations and reuses the production gate,
+without checking out code or queueing merges. Its owner-approved token capabilities match the merge job
+(contents/PR write), because read-only tokens hide merge settings and bypass-list metadata. It runs when the policy workflow changes and can be requested with the fixed
+`maintenance-audit` repository-dispatch event. `official-documentation-check` requests a documentation run.
+These events require authenticated repository write access to trigger; they do not grant runtime permissions.
+Audit and PR-target runs use separate concurrency groups so one cannot cancel the other.

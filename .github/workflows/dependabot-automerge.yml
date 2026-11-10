@@ -1,6 +1,13 @@
 name: Dependabot auto-merge
 
 on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [maintenance-audit]
+  pull_request:
+    paths:
+      - ".github/workflows/dependabot-automerge.yml"
+      - ".github/maintenance-settings.json"
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -8,12 +15,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: dependabot-automerge-${{ github.event.pull_request.number }}
+  group: dependabot-automerge-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   enable:
     if: >-
+      github.event_name == 'pull_request_target' &&
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.base.ref == github.event.repository.default_branch &&
@@ -37,62 +45,129 @@ jobs:
            steps.metadata.outputs.package-ecosystem == 'github_actions') &&
           (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
            steps.metadata.outputs.update-type == 'version-update:semver-minor')
-        env:
+        env: &protection-env
           GH_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
           REPOSITORY: ${{ github.event.repository.name }}
-        run: |
-          gh api graphql -F owner="$OWNER" -F name="$REPOSITORY" -f query='
-            query($owner: String!, $name: String!) {
-              repository(owner: $owner, name: $name) {
-                autoMergeAllowed
-                defaultBranchRef {
-                  branchProtectionRule {
-                    isAdminEnforced
-                    requiresStatusChecks
-                    requiresStrictStatusChecks
-                    requiresConversationResolution
-                    allowsForcePushes
-                    allowsDeletions
-                    requiredStatusChecks { context app { databaseId } }
-                  }
-                }
-              }
-            }' > "$RUNNER_TEMP/maintenance-protection.json"
+        shell: python
+        run: &read-protection |
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+          from urllib.parse import quote
+
+          prefix = "repos/" + os.environ["OWNER"] + "/" + os.environ["REPOSITORY"]
+          def api(path):
+              response = subprocess.run(["gh", "api", path], text=True, capture_output=True)
+              if response.returncode:
+                  raise SystemExit(response.stderr)
+              return json.loads(response.stdout)
+
+          repository = api(prefix)
+          branch = quote(repository["default_branch"], safe="")
+          current_branch = api(f"{prefix}/branches/{branch}")
+          rules = []
+          for page in range(1, 101):
+              batch = api(f"{prefix}/rules/branches/{branch}?per_page=100&page={page}")
+              if not isinstance(batch, list):
+                  raise SystemExit("Invalid active branch rules response")
+              rules.extend(batch)
+              if len(batch) < 100:
+                  break
+          else:
+              raise SystemExit("Active branch rules pagination exceeded the safety limit")
+          ids = {rule.get("ruleset_id") for rule in rules if rule.get("ruleset_source_type") == "Repository"}
+          if any(type(value) is not int or value <= 0 for value in ids):
+              raise SystemExit("Invalid ruleset identifier")
+          definitions = {str(value): api(f"{prefix}/rulesets/{value}") for value in sorted(ids)}
+          for key, definition in definitions.items():
+              if "bypass_actors" not in definition:
+                  query = "query($id:ID!) { node(id:$id) { id ... on RepositoryRuleset { bypassActors(first:1) { totalCount } } } }"
+                  result = subprocess.run(
+                      ["gh", "api", "graphql", "-f", "query=" + query, "-f", "id=" + definition["node_id"]],
+                      text=True, capture_output=True,
+                  )
+                  if result.returncode:
+                      raise SystemExit(result.stderr)
+                  node = (json.loads(result.stdout).get("data") or {}).get("node") or {}
+                  count = (node.get("bypassActors") or {}).get("totalCount")
+                  if node.get("id") != definition["node_id"] or type(count) is not int or count < 0:
+                      raise SystemExit("Missing or invalid ruleset bypass count")
+                  definition["bypass_actor_count"] = count
+              print(
+                  f"Ruleset {key}: enforcement={definition.get('enforcement')}, "
+                  f"bypass_list_visible={'bypass_actors' in definition}, "
+                  f"bypass_count={definition.get('bypass_actor_count', 'not-needed')}"
+              )
+          Path(os.environ["RUNNER_TEMP"], "maintenance-protection.json").write_text(
+              json.dumps({"repository": repository, "branch": current_branch, "rules": rules, "rulesets": definitions})
+          )
       - name: Require configured protection before queueing
         id: protection
         if: *routine
         shell: python
-        run: |
+        run: &guard-protection |
           import json
           import os
           from pathlib import Path
 
           response = json.loads(Path(os.environ["RUNNER_TEMP"], "maintenance-protection.json").read_text())
-          repository = (response.get("data") or {}).get("repository") or {}
-          protection = (repository.get("defaultBranchRef") or {}).get("branchProtectionRule") or {}
-          checks = {
-              item.get("context"): (item.get("app") or {}).get("databaseId")
-              for item in protection.get("requiredStatusChecks", [])
+          repository = response.get("repository") or {}
+          definitions = response.get("rulesets") or {}
+          branch = response.get("branch") or {}
+          eligible = {
+              key for key, definition in definitions.items()
+              if definition.get("target") == "branch"
+              and definition.get("enforcement") == "active"
+              and (
+                  definition.get("bypass_actors") == []
+                  or ("bypass_actors" not in definition and type(definition.get("bypass_actor_count")) is int
+                      and definition["bypass_actor_count"] == 0)
+              )
           }
+          rules = [
+              rule for rule in response.get("rules", [])
+              if rule.get("ruleset_source_type") == "Repository"
+              and str(rule.get("ruleset_id")) in eligible
+          ]
           expected = {
               "Required CI": 15368,
               "Build bilingual manual": 15368,
               "Analyze Python": 15368,
               "CodeQL": 57789,
           }
-          required = (
-              repository.get("autoMergeAllowed") is True
-              and all(protection.get(key) is True for key in (
-                  "isAdminEnforced", "requiresStatusChecks", "requiresStrictStatusChecks",
-                  "requiresConversationResolution",
-              ))
-              and protection.get("allowsForcePushes") is False
-              and protection.get("allowsDeletions") is False
-              and all(checks.get(name) == app for name, app in expected.items())
-          )
-          if not required:
-              raise SystemExit("Auto-merge refused: required branch protection is absent or incomplete.")
+          strict_checks = False
+          conversations = False
+          for rule in rules:
+              parameters = rule.get("parameters") or {}
+              if rule.get("type") == "required_status_checks":
+                  checks = {
+                      item.get("context"): item.get("integration_id")
+                      for item in parameters.get("required_status_checks", [])
+                  }
+                  strict_checks |= (
+                      parameters.get("strict_required_status_checks_policy") is True
+                      and all(checks.get(name) == app for name, app in expected.items())
+                  )
+              if rule.get("type") == "pull_request":
+                  conversations |= parameters.get("required_review_thread_resolution") is True
+          types = {rule.get("type") for rule in rules}
+          # A create-only exemption cannot affect this existing protected default branch.
+          checks = {
+              "auto-merge enabled": repository.get("allow_auto_merge") is True,
+              "existing protected default branch": (
+                  bool(repository.get("default_branch"))
+                  and branch.get("name") == repository.get("default_branch")
+                  and branch.get("protected") is True
+              ),
+              "active ruleset with a verified zero bypass count": bool(eligible),
+              "strict required checks and expected app identities": strict_checks,
+              "conversation resolution": conversations,
+              "force-push and deletion protection": {"deletion", "non_fast_forward"} <= types,
+          }
+          if not all(checks.values()):
+              raise SystemExit("Auto-merge refused: " + ", ".join(name for name, passed in checks.items() if not passed))
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write("ready=true\n")
       - name: Queue routine update behind required checks
@@ -103,3 +178,21 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
         run: gh pr merge "$PR_URL" --auto --squash --match-head-commit "$EXPECTED_HEAD"
+
+  audit:
+    name: Audit maintenance protection
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Owner-approved: match the merge token's visibility; the steps below only read and validate.
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Read effective branch protection
+        env: *protection-env
+        shell: python
+        run: *read-protection
+      - name: Verify the same gate without queueing a merge
+        shell: python
+        run: *guard-protection

@@ -21,26 +21,14 @@ def workflow(name: str) -> dict:
 
 def protected_repository() -> dict:
     settings = json.loads((ROOT / ".github/maintenance-settings.json").read_text())
+    definition = settings["ruleset"]
     return {
-        "data": {
-            "repository": {
-                "autoMergeAllowed": True,
-                "defaultBranchRef": {
-                    "branchProtectionRule": {
-                        "isAdminEnforced": True,
-                        "requiresStatusChecks": True,
-                        "requiresStrictStatusChecks": True,
-                        "requiresConversationResolution": True,
-                        "allowsForcePushes": False,
-                        "allowsDeletions": False,
-                        "requiredStatusChecks": [
-                            {"context": check["context"], "app": {"databaseId": check["app_id"]}}
-                            for check in settings["branch_protection"]["required_status_checks"]["checks"]
-                        ],
-                    }
-                },
-            }
-        }
+        "repository": {"allow_auto_merge": True, "default_branch": "master"},
+        "branch": {"name": "master", "protected": True},
+        "rulesets": {"123": deepcopy(definition)},
+        "rules": [
+            {**deepcopy(rule), "ruleset_id": 123, "ruleset_source_type": "Repository"} for rule in definition["rules"]
+        ],
     }
 
 
@@ -67,31 +55,58 @@ def test_merge_gate_accepts_only_the_configured_protection(tmp_path: Path) -> No
     "weakened",
     [
         "absent",
-        "autoMergeAllowed",
-        "isAdminEnforced",
-        "requiresStatusChecks",
-        "requiresStrictStatusChecks",
-        "requiresConversationResolution",
-        "allowsForcePushes",
-        "allowsDeletions",
+        "auto-merge",
+        "bypass",
+        "hidden-bypass",
+        "nonzero-bypass-count",
+        "disabled",
+        "strict",
+        "missing-branch",
+        "wrong-branch",
+        "unprotected-branch",
+        "conversations",
+        "deletion",
+        "force-push",
         "missing-check",
         "wrong-app",
     ],
 )
 def test_merge_gate_fails_closed_for_incomplete_or_weaker_protection(tmp_path: Path, weakened: str) -> None:
     response = protected_repository()
-    repository = response["data"]["repository"]
-    protection = repository["defaultBranchRef"]["branchProtectionRule"]
+    definition = response["rulesets"]["123"]
+    rules = response["rules"]
+    status = next(rule for rule in rules if rule["type"] == "required_status_checks")["parameters"]
+    review = next(rule for rule in rules if rule["type"] == "pull_request")["parameters"]
     if weakened == "absent":
-        repository["defaultBranchRef"]["branchProtectionRule"] = None
-    elif weakened == "autoMergeAllowed":
-        repository[weakened] = False
+        response["rules"] = []
+    elif weakened == "auto-merge":
+        response["repository"]["allow_auto_merge"] = False
+    elif weakened == "bypass":
+        definition["bypass_actors"] = [{"actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "always"}]
+    elif weakened == "hidden-bypass":
+        del definition["bypass_actors"]
+    elif weakened == "nonzero-bypass-count":
+        del definition["bypass_actors"]
+        definition["bypass_actor_count"] = 1
+    elif weakened == "disabled":
+        definition["enforcement"] = "disabled"
+    elif weakened == "strict":
+        status["strict_required_status_checks_policy"] = False
+    elif weakened == "missing-branch":
+        response["branch"] = {}
+    elif weakened == "wrong-branch":
+        response["branch"]["name"] = "another-branch"
+    elif weakened == "unprotected-branch":
+        response["branch"]["protected"] = False
+    elif weakened == "conversations":
+        review["required_review_thread_resolution"] = False
+    elif weakened in {"deletion", "force-push"}:
+        removed = "deletion" if weakened == "deletion" else "non_fast_forward"
+        response["rules"] = [rule for rule in rules if rule["type"] != removed]
     elif weakened == "missing-check":
-        protection["requiredStatusChecks"].pop()
+        status["required_status_checks"].pop()
     elif weakened == "wrong-app":
-        protection["requiredStatusChecks"][0]["app"]["databaseId"] = 0
-    else:
-        protection[weakened] = not protection[weakened]
+        status["required_status_checks"][0]["integration_id"] = 0
     result = run_gate(tmp_path, response)
     assert result.returncode != 0
     assert "Auto-merge refused" in result.stderr
@@ -100,7 +115,21 @@ def test_merge_gate_fails_closed_for_incomplete_or_weaker_protection(tmp_path: P
 
 def test_privileged_merge_workflow_never_checks_out_pr_code_or_skips_metadata_verification() -> None:
     automation = workflow("dependabot-automerge.yml")
-    assert set(automation["on"]) == {"pull_request_target"}
+    assert set(automation["on"]) == {"pull_request_target", "pull_request", "repository_dispatch", "workflow_dispatch"}
+    assert "github.event_name == 'pull_request_target'" in automation["jobs"]["enable"]["if"]
+    audit = automation["jobs"]["audit"]
+    assert audit["permissions"] == automation["jobs"]["enable"]["permissions"]
+    assert len(audit["steps"]) == 2
+    assert all("uses" not in step for step in audit["steps"])
+    assert audit["steps"][0]["run"] == next(
+        step["run"]
+        for step in automation["jobs"]["enable"]["steps"]
+        if step["name"] == "Read effective branch protection"
+    )
+    assert "gh pr merge" not in "\n".join(step.get("run", "") for step in audit["steps"])
+    assert audit["steps"][-1]["run"] == next(
+        step["run"] for step in automation["jobs"]["enable"]["steps"] if step.get("id") == "protection"
+    )
     job = automation["jobs"]["enable"]
     assert "dependabot[bot]" in job["if"]
     assert "head.repo.full_name == github.repository" in job["if"]
@@ -194,3 +223,12 @@ def test_bad_manifest_date_field_is_rejected_before_snapshot_changes(snapshot_fi
         prepare_update(candidate, root=root)
     assert (root / "references/official-api-snapshot.yaml").read_bytes() == accepted
     assert (root / "references/api-coverage.yaml").read_text() == bad
+
+
+def test_ruleset_gate_accepts_verified_zero_count_without_reading_actor_identities(tmp_path: Path) -> None:
+    response = protected_repository()
+    definition = response["rulesets"]["123"]
+    del definition["bypass_actors"]
+    definition["bypass_actor_count"] = 0
+    result = run_gate(tmp_path, response)
+    assert result.returncode == 0, result.stderr

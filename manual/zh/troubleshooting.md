@@ -65,17 +65,21 @@ CLI 忽略环境代理。网络确实需要代理时，设置经过审阅的 `SH
 所需仓库设置记录在 `.github/maintenance-settings.json`，需要具备 Administration:write、Actions:write
 权限的凭据应用，或在 GitHub 对应设置页面完成：
 
-1. 开启 `allow_auto_merge`，保护 `master` 并同样约束管理员。要求及时更新分支，且必须通过
+1. 开启 `allow_auto_merge`，将 classic `master` 保护转换为 Active 状态的分支规则集，
+   Bypass list 留空以同样约束管理员。要求及时更新分支，且必须通过
    `Required CI`、`Build bilingual manual`、`Analyze Python`（GitHub Actions 应用 ID 15368）
-   和 `CodeQL`（GitHub Code Scanning 应用 ID 57789）。要求解决讨论，禁止强推和删除分支。
+   和 `CodeQL`（GitHub Code Scanning 应用 ID 57789）。要求 PR 讨论已解决（必需批准数可设为 0），
+   启用删除和非快进推送保护；精确规则集记录在设置 JSON 中。
 2. 默认工作流权限保持只读，允许 Actions 创建 PR。GitHub 将开关命名为
    “Allow GitHub Actions to create and approve pull requests”，但本仓库工作流不会自动批准 PR。
-   仅两个特定自动化任务声明所需的仓库内容／PR 写权限。
+   两个维护任务及所有者明确批准的同身份审计声明所需的仓库内容／PR 写权限。
 3. Dependabot 流程仅处理同仓库、目标为默认分支的非草稿 PR，不检出 PR 代码。
    固定版本的元数据 Action 验证 Dependabot 身份及提交签名。仅已验证、无维护者变更的配置生态内
    semver 补丁／次版本更新可进入自动合并队列。
-4. 执行 `gh pr merge --auto --squash --match-head-commit` 前，通过 GraphQL 核对实际保护规则、
-   必需检查及其应用来源。规则缺失、不可读取或减弱时拒绝自动合并。主版本及未知元数据保留人工处理。
+4. 执行 `gh pr merge --auto --squash --match-head-commit` 前，通过 Metadata 权限可读的 REST 规则接口
+   核对 Active、无绕过的规则集、
+   必需检查及其应用来源。classic 详情接口需要 GITHUB_TOKEN 不具备的 Administration:read 权限，
+   因此运行时使用规则集。规则缺失、不可读取或减弱时拒绝自动合并。主版本及未知元数据保留人工处理。
    GitHub 原生分支保护负责在合并时执行最新检查门禁。
 
 官方依据：[Dependabot 自动化](https://docs.github.com/en/code-security/tutorials/secure-your-dependencies/automate-dependabot-with-actions)
@@ -83,3 +87,9 @@ CLI 忽略环境代理。网络确实需要代理时，设置经过审阅的 `SH
 
 不自动任意修补业务代码、放宽失败断言、调用真实 Shodan API、消耗积分、接受主版本升级或发布。
 发布继续沿用现有版本标签及环境门禁。
+
+`Audit maintenance protection` 任务只执行读取 API 和校验，复用实际合并门禁，不检出代码、不加入合并队列。
+其令牌权限经所有者单独批准，与合并任务一致（仓库内容／PR 写），以读取只读令牌隐藏的合并设置和绕过名单。
+策略工作流变化时自动验证，也可使用固定的 `maintenance-audit` repository-dispatch 事件请求验证；
+`official-documentation-check` 请求一次文档巡检。触发事件需要已认证的仓库写权限，不增加运行时权限。
+审计与 PR-target 事件使用独立并发组，避免彼此取消。
