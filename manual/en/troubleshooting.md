@@ -42,42 +42,51 @@ Include the version, platform, command structure with secrets removed, exit code
 
 ## Repository maintenance and failed Actions
 
-The weekly official-documentation check keeps a failing status for real upstream drift. Before investigating,
-open its job summary and download the `official-documentation-review` artifact. It contains a candidate snapshot
-and an explanation of changed text and added/removed operations. Transient network and selected HTTP failures
-retry up to three times; permanent HTTP failures fail immediately. A fetch failure never replaces the accepted snapshot.
+The weekly official-documentation job retries transient network and selected HTTP failures up to three times.
+Permanent failures or invalid documents fail without replacing the accepted snapshot. Each run publishes an
+`official-documentation-review` artifact containing the report and candidate snapshot.
+
+When upstream content changes, the job maintains one PR from `automation/official-documentation`. Its write
+permissions are limited to repository contents and PRs; the commit allowlist contains the canonical snapshot,
+the coverage manifest, and generated platform copies. The preparation helper changes only the manifest retrieval
+date, preserving implementation and test claims. New operations therefore leave coverage checks failing until
+someone implements and reviews the new contract. No content or retrieval-date-only change means no update PR.
+A successfully created review PR handles drift without a repeated red scheduled job; fetch or PR-creation errors
+still fail visibly. The report and candidate artifact are uploaded even after failure.
 
 Review changed official sources even when all method/path pairs match: hashes cannot distinguish parameter,
-permission, credit, and response-contract changes. After accepting the candidate, synchronize `references/api-coverage.yaml` field `official_retrieved` with the
-snapshot retrieval date. Then regenerate platform bundles with
-`python scripts/build_bundles.py` and run all verification scripts. `--write` leaves an unchanged snapshot untouched,
-including its retrieval date, so a weekly check does not create date-only updates.
+permission, credit, and response-contract changes. Documentation PRs are never automatically merged. GitHub may
+require approval before running PR checks created by `GITHUB_TOKEN`; approve those checks during human review.
+Do not bypass the required checks or add a personal token merely to remove this review step.
 
-Every PR now exercises the release extra, an isolated wheel installation, and actual CycloneDX SBOM generation.
-`Required CI` aggregates quality, all nine OS/Python combinations, and the release smoke test; a failed or skipped
-prerequisite fails the aggregate. The bilingual documentation build runs on every PR so it can be a required check.
+Every PR exercises the release extra, an isolated wheel installation, and actual CycloneDX SBOM generation.
+`Required CI` aggregates quality, all nine OS/Python combinations, and release smoke; a failed or skipped
+prerequisite fails the aggregate. The bilingual manual builds on every PR so it can be a required check.
 Dependabot groups only minor/patch updates; major upgrades remain separate for review.
 
-### Proposed write-enabled automation (requires repository-owner approval)
+### Approved automation and repository settings
 
-The current workflows retain read-only repository permissions. No automatic merges, approvals, or snapshot PRs
-are enabled by this change. Before enabling them, review and approve these concrete settings and policies:
+The approved policy is implemented by `dependabot-automerge.yml` and `docs-drift.yml`. Repository settings are
+recorded in `.github/maintenance-settings.json` and must be applied by a credential with Administration:write
+and Actions:write permissions, or in the corresponding GitHub settings pages:
 
-1. Enable repository `allow_auto_merge` and protect `master`, including administrators, with strict/up-to-date
-   required checks `Required CI`, `Build bilingual manual`, `Analyze Python` (GitHub Actions app ID 15368),
-   and `CodeQL` (GitHub Code Scanning app ID 57789). Block force pushes and branch deletion. Do not bypass gates.
-2. Add a `pull_request_target` workflow limited to same-repository Dependabot PRs targeting the default branch.
-   Do not check out or execute PR code. Pin `dependabot/fetch-metadata` to a reviewed full commit SHA, keep its
-   signed-commit verification, and only queue `gh pr merge --auto --squash --match-head-commit` for verified
-   semver minor/patch metadata without maintainer changes. Unknown metadata and major upgrades remain manual.
-   The workflow must fail closed if required-check protection is absent. Do not auto-approve changes.
-3. Allow the docs drift job `contents: write` and `pull-requests: write` solely to maintain one fixed snapshot PR
-   branch. Restrict changed files to the canonical snapshot, the coverage-manifest retrieval date, and regenerated platform copies. Include the report,
-   run normal CI, and require human review; never auto-merge upstream text or operation changes. Creating a PR
-   with `GITHUB_TOKEN` can leave its checks waiting for approval under GitHub's event rules. A dedicated narrowly
-   scoped GitHub App token can remove that extra approval if unattended CI is required; never store a personal
-   token in source or bypass the CI gates.
+1. Enable `allow_auto_merge`. Protect `master`, including administrators, with strict/up-to-date required checks
+   `Required CI`, `Build bilingual manual`, `Analyze Python` (GitHub Actions app ID 15368), and `CodeQL` (GitHub
+   Code Scanning app ID 57789). Require conversation resolution; block force pushes and branch deletion.
+2. Keep default workflow permissions read-only and enable Actions to create pull requests. This GitHub setting
+   is named “Allow GitHub Actions to create and approve pull requests”; none of these workflows approves PRs.
+   Only the two specific automation jobs declare their required contents/PR write permissions.
+3. The Dependabot workflow handles same-repository, non-draft PRs targeting the default branch. It never checks
+   out PR code. The pinned metadata action verifies Dependabot identity and signed commits. Only verified
+   semver minor/patch updates in the configured ecosystems, without maintainer changes, can queue auto-merge.
+4. Before queueing `gh pr merge --auto --squash --match-head-commit`, the workflow reads effective protection
+   through GraphQL and requires every setting and check source above. Missing, unreadable, or weakened
+   protection fails closed. Major upgrades and unknown metadata remain manual. Native branch protection
+   enforces the full current checks before a merge can happen.
 
-Keep automatic source-code fixes, widening failing assertions, live Shodan calls, credit-consuming operations,
-major dependency upgrades, and releases outside this policy. A failed test is evidence to investigate, not a
-reason for an action to weaken validation. Release publishing stays behind the existing tag and environment gates.
+Official guidance: [Dependabot automation](https://docs.github.com/en/code-security/tutorials/secure-your-dependencies/automate-dependabot-with-actions)
+and [workflow event/token rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+
+Automatic source-code fixes, widening failing assertions, live Shodan calls, credit-consuming operations,
+major dependency upgrades, and releases stay outside this policy. Release publishing retains the existing
+version-tag and environment gates.

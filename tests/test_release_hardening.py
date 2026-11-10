@@ -22,6 +22,8 @@ EXPECTED_ACTIONS = {
     "github/codeql-action/analyze",
     "github/codeql-action/init",
     "pypa/gh-action-pypi-publish",
+    "dependabot/fetch-metadata",
+    "peter-evans/create-pull-request",
 }
 
 
@@ -83,6 +85,7 @@ def test_every_github_workflow_is_valid_yaml_and_pins_external_actions() -> None
     workflows = sorted(ROOT.joinpath(".github", "workflows").glob("*.yml"))
     assert {path.name for path in workflows} == {
         "ci.yml",
+        "dependabot-automerge.yml",
         "codeql.yml",
         "docs-drift.yml",
         "docs.yml",
@@ -167,7 +170,7 @@ def test_supply_chain_and_documentation_workflows_have_expected_gates() -> None:
     assert "--report" in drift and "--candidate-snapshot" in drift
     parsed_drift = yaml.load(drift, Loader=yaml.BaseLoader)
     assert parsed_drift["permissions"] == {"contents": "read"}
-    assert "permissions" not in parsed_drift["jobs"]["compare"]
+    assert parsed_drift["jobs"]["compare"]["permissions"] == {"contents": "write", "pull-requests": "write"}
 
 
 def test_ci_separates_quality_and_compatibility_work_without_duplicate_builds() -> None:
