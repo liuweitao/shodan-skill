@@ -6,33 +6,61 @@
     "default_workflow_permissions": "read",
     "can_approve_pull_request_reviews": true
   },
-  "branch_protection": {
-    "required_status_checks": {
-      "strict": true,
-      "checks": [
-        {
-          "context": "Required CI",
-          "app_id": 15368
-        },
-        {
-          "context": "Build bilingual manual",
-          "app_id": 15368
-        },
-        {
-          "context": "Analyze Python",
-          "app_id": 15368
-        },
-        {
-          "context": "CodeQL",
-          "app_id": 57789
-        }
-      ]
+  "ruleset": {
+    "name": "master maintenance protection",
+    "target": "branch",
+    "enforcement": "active",
+    "bypass_actors": [],
+    "conditions": {
+      "ref_name": {
+        "include": [
+          "~DEFAULT_BRANCH"
+        ],
+        "exclude": []
+      }
     },
-    "enforce_admins": true,
-    "required_pull_request_reviews": null,
-    "restrictions": null,
-    "required_conversation_resolution": true,
-    "allow_force_pushes": false,
-    "allow_deletions": false
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "Required CI",
+              "integration_id": 15368
+            },
+            {
+              "context": "Build bilingual manual",
+              "integration_id": 15368
+            },
+            {
+              "context": "Analyze Python",
+              "integration_id": 15368
+            },
+            {
+              "context": "CodeQL",
+              "integration_id": 57789
+            }
+          ]
+        }
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": false,
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true
+        }
+      }
+    ]
   }
 }

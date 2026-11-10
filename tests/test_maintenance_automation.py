@@ -21,26 +21,13 @@ def workflow(name: str) -> dict:
 
 def protected_repository() -> dict:
     settings = json.loads((ROOT / ".github/maintenance-settings.json").read_text())
+    definition = settings["ruleset"]
     return {
-        "data": {
-            "repository": {
-                "autoMergeAllowed": True,
-                "defaultBranchRef": {
-                    "branchProtectionRule": {
-                        "isAdminEnforced": True,
-                        "requiresStatusChecks": True,
-                        "requiresStrictStatusChecks": True,
-                        "requiresConversationResolution": True,
-                        "allowsForcePushes": False,
-                        "allowsDeletions": False,
-                        "requiredStatusChecks": [
-                            {"context": check["context"], "app": {"databaseId": check["app_id"]}}
-                            for check in settings["branch_protection"]["required_status_checks"]["checks"]
-                        ],
-                    }
-                },
-            }
-        }
+        "repository": {"allow_auto_merge": True},
+        "rulesets": {"123": deepcopy(definition)},
+        "rules": [
+            {**deepcopy(rule), "ruleset_id": 123, "ruleset_source_type": "Repository"} for rule in definition["rules"]
+        ],
     }
 
 
@@ -67,31 +54,48 @@ def test_merge_gate_accepts_only_the_configured_protection(tmp_path: Path) -> No
     "weakened",
     [
         "absent",
-        "autoMergeAllowed",
-        "isAdminEnforced",
-        "requiresStatusChecks",
-        "requiresStrictStatusChecks",
-        "requiresConversationResolution",
-        "allowsForcePushes",
-        "allowsDeletions",
+        "auto-merge",
+        "bypass",
+        "hidden-bypass",
+        "disabled",
+        "strict",
+        "create-exemption",
+        "conversations",
+        "deletion",
+        "force-push",
         "missing-check",
         "wrong-app",
     ],
 )
 def test_merge_gate_fails_closed_for_incomplete_or_weaker_protection(tmp_path: Path, weakened: str) -> None:
     response = protected_repository()
-    repository = response["data"]["repository"]
-    protection = repository["defaultBranchRef"]["branchProtectionRule"]
+    definition = response["rulesets"]["123"]
+    rules = response["rules"]
+    status = next(rule for rule in rules if rule["type"] == "required_status_checks")["parameters"]
+    review = next(rule for rule in rules if rule["type"] == "pull_request")["parameters"]
     if weakened == "absent":
-        repository["defaultBranchRef"]["branchProtectionRule"] = None
-    elif weakened == "autoMergeAllowed":
-        repository[weakened] = False
+        response["rules"] = []
+    elif weakened == "auto-merge":
+        response["repository"]["allow_auto_merge"] = False
+    elif weakened == "bypass":
+        definition["bypass_actors"] = [{"actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "always"}]
+    elif weakened == "hidden-bypass":
+        del definition["bypass_actors"]
+    elif weakened == "disabled":
+        definition["enforcement"] = "disabled"
+    elif weakened == "strict":
+        status["strict_required_status_checks_policy"] = False
+    elif weakened == "create-exemption":
+        status["do_not_enforce_on_create"] = True
+    elif weakened == "conversations":
+        review["required_review_thread_resolution"] = False
+    elif weakened in {"deletion", "force-push"}:
+        removed = "deletion" if weakened == "deletion" else "non_fast_forward"
+        response["rules"] = [rule for rule in rules if rule["type"] != removed]
     elif weakened == "missing-check":
-        protection["requiredStatusChecks"].pop()
+        status["required_status_checks"].pop()
     elif weakened == "wrong-app":
-        protection["requiredStatusChecks"][0]["app"]["databaseId"] = 0
-    else:
-        protection[weakened] = not protection[weakened]
+        status["required_status_checks"][0]["integration_id"] = 0
     result = run_gate(tmp_path, response)
     assert result.returncode != 0
     assert "Auto-merge refused" in result.stderr
