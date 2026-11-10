@@ -1,0 +1,105 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enable:
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.base.ref == github.event.repository.default_branch &&
+      !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Never check out PR code in this privileged workflow.
+      - name: Verify Dependabot metadata and signed commits
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3
+        with:
+          github-token: ${{ github.token }}
+      - name: Read effective branch protection
+        if: &routine >-
+          steps.metadata.outputs.maintainer-changes == 'false' &&
+          (steps.metadata.outputs.package-ecosystem == 'pip' ||
+           steps.metadata.outputs.package-ecosystem == 'github_actions') &&
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
+        run: |
+          gh api graphql -F owner="$OWNER" -F name="$REPOSITORY" -f query='
+            query($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                autoMergeAllowed
+                defaultBranchRef {
+                  branchProtectionRule {
+                    isAdminEnforced
+                    requiresStatusChecks
+                    requiresStrictStatusChecks
+                    requiresConversationResolution
+                    allowsForcePushes
+                    allowsDeletions
+                    requiredStatusChecks { context app { databaseId } }
+                  }
+                }
+              }
+            }' > "$RUNNER_TEMP/maintenance-protection.json"
+      - name: Require configured protection before queueing
+        id: protection
+        if: *routine
+        shell: python
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          response = json.loads(Path(os.environ["RUNNER_TEMP"], "maintenance-protection.json").read_text())
+          repository = (response.get("data") or {}).get("repository") or {}
+          protection = (repository.get("defaultBranchRef") or {}).get("branchProtectionRule") or {}
+          checks = {
+              item.get("context"): (item.get("app") or {}).get("databaseId")
+              for item in protection.get("requiredStatusChecks", [])
+          }
+          expected = {
+              "Required CI": 15368,
+              "Build bilingual manual": 15368,
+              "Analyze Python": 15368,
+              "CodeQL": 57789,
+          }
+          required = (
+              repository.get("autoMergeAllowed") is True
+              and all(protection.get(key) is True for key in (
+                  "isAdminEnforced", "requiresStatusChecks", "requiresStrictStatusChecks",
+                  "requiresConversationResolution",
+              ))
+              and protection.get("allowsForcePushes") is False
+              and protection.get("allowsDeletions") is False
+              and all(checks.get(name) == app for name, app in expected.items())
+          )
+          if not required:
+              raise SystemExit("Auto-merge refused: required branch protection is absent or incomplete.")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("ready=true\n")
+      - name: Queue routine update behind required checks
+        if: steps.protection.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: gh pr merge "$PR_URL" --auto --squash --match-head-commit "$EXPECTED_HEAD"

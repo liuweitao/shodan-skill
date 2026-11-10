@@ -42,35 +42,44 @@ CLI 忽略环境代理。网络确实需要代理时，设置经过审阅的 `SH
 
 ## 仓库维护与 Actions 失败
 
-每周官方文档巡检仍会在真实漂移时失败。先查看任务摘要并下载 `official-documentation-review` 产物，
-其中包含候选快照、文本变化说明和新增／删除的接口清单。临时网络故障及部分 HTTP 错误最多重试三次，
-永久 HTTP 错误立即失败；抓取失败不会覆盖已接受的快照。
+每周官方文档巡检对临时网络故障及部分 HTTP 错误最多重试三次。永久故障或无效文档会失败，
+不会覆盖已接受的快照。每次运行产出 `official-documentation-review`，包含漂移报告与候选快照。
 
-即使接口路径完全相同，也必须审阅变化来源：文本哈希无法判断参数、权限、积分及响应契约的语义变化。
-接受候选快照后，同步 `references/api-coverage.yaml` 的 `official_retrieved` 与快照抓取日期，再运行 `python scripts/build_bundles.py` 同步各平台副本并执行全部验证。
-`--write` 在内容未变时不会更新抓取日期，避免产生每周仅日期变化的提交。
+上游内容变化时，任务从 `automation/official-documentation` 固定分支维护一条审阅 PR。
+写权限仅限仓库内容和 PR，提交范围限定为官方快照、覆盖清单及生成的平台副本；准备脚本仅修改
+覆盖清单的抓取日期，保留接口实现及测试声明。因此，新增接口会让覆盖检查保持失败，直到人工完成
+契约实现和审阅。没有内容变化、仅抓取日期变化时不创建 PR。审阅 PR 成功创建后，漂移作为已处理事件
+结束巡检，避免每周重复报红；抓取或创建 PR 失败仍会明确报错，报告和候选快照即使失败也会上传。
 
-每条 PR 都验证 release 依赖、隔离 wheel 安装及真实 CycloneDX SBOM 生成。
-`Required CI` 汇总质量检查、九种系统／Python 组合与发布冒烟测试，前置任务失败或跳过都会使汇总失败。
-双语文档构建改为在全部 PR 上运行，适合作为必需检查。Dependabot 仅将次版本和补丁更新分组，
-主版本更新单独保留人工审阅。
+即使接口路径相同，也必须审阅变化来源：哈希无法判断参数、权限、积分和响应契约的语义变化。
+文档 PR 不自动合并。GitHub 可能要求先批准 `GITHUB_TOKEN` 所创建 PR 的检查；在人工审阅时放行检查，
+不绕过必需检查，也不为省去这一审核步骤而加入个人令牌。
 
-### 待仓库所有者批准的写权限自动化
+每条 PR 都验证 release 依赖、隔离 wheel 安装与真实 CycloneDX SBOM 生成。
+`Required CI` 汇总质量检查、九种系统／Python 组合与发布冒烟测试；前置任务失败或跳过都会导致汇总失败。
+双语文档在全部 PR 上构建，适合作为必需检查。Dependabot 仅将次版本和补丁更新分组，主版本升级单独审阅。
 
-当前改动维持工作流对仓库内容的只读权限，没有启用自动合并、自动批准或自动创建快照 PR。
-建议批准以下明确范围后再实施：
+### 已批准的自动化与仓库设置
 
-1. 开启仓库 `allow_auto_merge`，保护 `master` 且同样约束管理员，要求分支及时更新并通过
+限定策略由 `dependabot-automerge.yml` 和 `docs-drift.yml` 实现。
+所需仓库设置记录在 `.github/maintenance-settings.json`，需要具备 Administration:write、Actions:write
+权限的凭据应用，或在 GitHub 对应设置页面完成：
+
+1. 开启 `allow_auto_merge`，保护 `master` 并同样约束管理员。要求及时更新分支，且必须通过
    `Required CI`、`Build bilingual manual`、`Analyze Python`（GitHub Actions 应用 ID 15368）
-   以及 `CodeQL`（GitHub Code Scanning 应用 ID 57789），禁止强推和删除分支，不绕过检查。
-2. 使用 `pull_request_target` 处理同仓库、目标为默认分支的 Dependabot PR，不检出或执行 PR 代码。
-   固定 `dependabot/fetch-metadata` 的完整提交 SHA 并保留签名校验，仅对已验证、无维护者变更的
-   semver 补丁／次版本更新执行 `gh pr merge --auto --squash --match-head-commit`，等待必需检查放行。
-   元数据未知、主版本更新均不自动合并；保护规则未配置时必须拒绝执行，不自动批准代码。
-3. 仅给文档巡检任务增加 `contents: write` 和 `pull-requests: write`，维护一个固定分支和一条更新 PR。
-   修改范围限于官方快照、覆盖清单的抓取日期及同步的平台副本，附漂移报告，运行正常 CI，保留人工语义审阅，禁止自动合并。
-   按 GitHub 事件规则，`GITHUB_TOKEN` 创建的 PR 可能需要先批准才能运行检查；如需无人值守，
-   使用权限受限的独立 GitHub App 令牌，不把个人令牌写入代码，也不绕过 CI。
+   和 `CodeQL`（GitHub Code Scanning 应用 ID 57789）。要求解决讨论，禁止强推和删除分支。
+2. 默认工作流权限保持只读，允许 Actions 创建 PR。GitHub 将开关命名为
+   “Allow GitHub Actions to create and approve pull requests”，但本仓库工作流不会自动批准 PR。
+   仅两个特定自动化任务声明所需的仓库内容／PR 写权限。
+3. Dependabot 流程仅处理同仓库、目标为默认分支的非草稿 PR，不检出 PR 代码。
+   固定版本的元数据 Action 验证 Dependabot 身份及提交签名。仅已验证、无维护者变更的配置生态内
+   semver 补丁／次版本更新可进入自动合并队列。
+4. 执行 `gh pr merge --auto --squash --match-head-commit` 前，通过 GraphQL 核对实际保护规则、
+   必需检查及其应用来源。规则缺失、不可读取或减弱时拒绝自动合并。主版本及未知元数据保留人工处理。
+   GitHub 原生分支保护负责在合并时执行最新检查门禁。
 
-不让自动化任意修补业务代码、放宽失败断言、调用真实 Shodan API、消耗积分、自动接受主版本升级或发布。
-发布继续沿用现有标签及环境门禁。失败测试应触发定位，不能成为自动降低验证标准的理由。
+官方依据：[Dependabot 自动化](https://docs.github.com/en/code-security/tutorials/secure-your-dependencies/automate-dependabot-with-actions)
+及[工作流事件与令牌规则](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
+
+不自动任意修补业务代码、放宽失败断言、调用真实 Shodan API、消耗积分、接受主版本升级或发布。
+发布继续沿用现有版本标签及环境门禁。
