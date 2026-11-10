@@ -1,6 +1,8 @@
 name: Official documentation drift
 
 on:
+  repository_dispatch:
+    types: [official-documentation-check]
   schedule:
     - cron: "17 2 * * 1"
   workflow_dispatch:

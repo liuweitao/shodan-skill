@@ -1,6 +1,13 @@
 name: Dependabot auto-merge
 
 on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [maintenance-audit]
+  pull_request:
+    paths:
+      - ".github/workflows/dependabot-automerge.yml"
+      - ".github/maintenance-settings.json"
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -14,6 +21,7 @@ concurrency:
 jobs:
   enable:
     if: >-
+      github.event_name == 'pull_request_target' &&
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.base.ref == github.event.repository.default_branch &&
@@ -37,11 +45,11 @@ jobs:
            steps.metadata.outputs.package-ecosystem == 'github_actions') &&
           (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
            steps.metadata.outputs.update-type == 'version-update:semver-minor')
-        env:
+        env: &protection-env
           GH_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
           REPOSITORY: ${{ github.event.repository.name }}
-        run: |
+        run: &read-protection |
           gh api graphql -F owner="$OWNER" -F name="$REPOSITORY" -f query='
             query($owner: String!, $name: String!) {
               repository(owner: $owner, name: $name) {
@@ -63,7 +71,7 @@ jobs:
         id: protection
         if: *routine
         shell: python
-        run: |
+        run: &guard-protection |
           import json
           import os
           from pathlib import Path
@@ -103,3 +111,18 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
         run: gh pr merge "$PR_URL" --auto --squash --match-head-commit "$EXPECTED_HEAD"
+
+  audit:
+    name: Audit maintenance protection
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Read effective branch protection
+        env: *protection-env
+        run: *read-protection
+      - name: Verify the same gate without queueing a merge
+        shell: python
+        run: *guard-protection

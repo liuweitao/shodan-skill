@@ -100,7 +100,14 @@ def test_merge_gate_fails_closed_for_incomplete_or_weaker_protection(tmp_path: P
 
 def test_privileged_merge_workflow_never_checks_out_pr_code_or_skips_metadata_verification() -> None:
     automation = workflow("dependabot-automerge.yml")
-    assert set(automation["on"]) == {"pull_request_target"}
+    assert set(automation["on"]) == {"pull_request_target", "pull_request", "repository_dispatch", "workflow_dispatch"}
+    assert "github.event_name == 'pull_request_target'" in automation["jobs"]["enable"]["if"]
+    audit = automation["jobs"]["audit"]
+    assert audit["permissions"] == {"contents": "read"}
+    assert "gh pr merge" not in "\n".join(step.get("run", "") for step in audit["steps"])
+    assert audit["steps"][-1]["run"] == next(
+        step["run"] for step in automation["jobs"]["enable"]["steps"] if step.get("id") == "protection"
+    )
     job = automation["jobs"]["enable"]
     assert "dependabot[bot]" in job["if"]
     assert "head.repo.full_name == github.repository" in job["if"]
