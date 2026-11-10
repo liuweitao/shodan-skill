@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import re
+from importlib.metadata import requires
 from pathlib import Path
 
 import yaml
+from packaging.requirements import Requirement
 
 from scripts.verify_release import package_versions, verify_release
 
@@ -60,7 +62,15 @@ def test_project_metadata_exposes_security_and_release_inputs() -> None:
     pyproject = ROOT.joinpath("pyproject.toml").read_text(encoding="utf-8")
     assert 'version = "2.0.1"' in pyproject
     assert 'Security = "https://github.com/liuweitao/shodan-skill/security/policy"' in pyproject
-    assert '"cyclonedx-bom>=7.3,<8"' in pyproject
+    # Validate the installed release contract without freezing Dependabot's version range.
+    release_requirements = [Requirement(value) for value in requires("shodan-skill") or []]
+    sbom_requirements = [requirement for requirement in release_requirements if requirement.name == "cyclonedx-bom"]
+    assert len(sbom_requirements) == 1
+    sbom = sbom_requirements[0]
+    assert sbom.marker is not None and sbom.marker.evaluate({"extra": "release"})
+    assert not sbom.marker.evaluate({"extra": "dev"})
+    assert any(spec.operator == ">=" for spec in sbom.specifier)
+    assert any(spec.operator in {"<", "<="} for spec in sbom.specifier)
     assert '"Programming Language :: Python :: 3.10"' in pyproject
     assert '"Programming Language :: Python :: 3.14"' in pyproject
 
