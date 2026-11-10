@@ -39,3 +39,45 @@ Add the exact `--confirm` or `--yes` option. Scans and monitored networks also n
 ## Reporting a problem
 
 Include the version, platform, command structure with secrets removed, exit code, and redacted stderr. Never attach an API key, proxy credential, signed URL, notifier secret, account response, or unreviewed host dataset. Report security issues privately through the repository's security policy.
+
+## Repository maintenance and failed Actions
+
+The weekly official-documentation check keeps a failing status for real upstream drift. Before investigating,
+open its job summary and download the `official-documentation-review` artifact. It contains a candidate snapshot
+and an explanation of changed text and added/removed operations. Transient network and selected HTTP failures
+retry up to three times; permanent HTTP failures fail immediately. A fetch failure never replaces the accepted snapshot.
+
+Review changed official sources even when all method/path pairs match: hashes cannot distinguish parameter,
+permission, credit, and response-contract changes. After accepting the candidate, synchronize `references/api-coverage.yaml` field `official_retrieved` with the
+snapshot retrieval date. Then regenerate platform bundles with
+`python scripts/build_bundles.py` and run all verification scripts. `--write` leaves an unchanged snapshot untouched,
+including its retrieval date, so a weekly check does not create date-only updates.
+
+Every PR now exercises the release extra, an isolated wheel installation, and actual CycloneDX SBOM generation.
+`Required CI` aggregates quality, all nine OS/Python combinations, and the release smoke test; a failed or skipped
+prerequisite fails the aggregate. The bilingual documentation build runs on every PR so it can be a required check.
+Dependabot groups only minor/patch updates; major upgrades remain separate for review.
+
+### Proposed write-enabled automation (requires repository-owner approval)
+
+The current workflows retain read-only repository permissions. No automatic merges, approvals, or snapshot PRs
+are enabled by this change. Before enabling them, review and approve these concrete settings and policies:
+
+1. Enable repository `allow_auto_merge` and protect `master`, including administrators, with strict/up-to-date
+   required checks `Required CI`, `Build bilingual manual`, `Analyze Python` (GitHub Actions app ID 15368),
+   and `CodeQL` (GitHub Code Scanning app ID 57789). Block force pushes and branch deletion. Do not bypass gates.
+2. Add a `pull_request_target` workflow limited to same-repository Dependabot PRs targeting the default branch.
+   Do not check out or execute PR code. Pin `dependabot/fetch-metadata` to a reviewed full commit SHA, keep its
+   signed-commit verification, and only queue `gh pr merge --auto --squash --match-head-commit` for verified
+   semver minor/patch metadata without maintainer changes. Unknown metadata and major upgrades remain manual.
+   The workflow must fail closed if required-check protection is absent. Do not auto-approve changes.
+3. Allow the docs drift job `contents: write` and `pull-requests: write` solely to maintain one fixed snapshot PR
+   branch. Restrict changed files to the canonical snapshot, the coverage-manifest retrieval date, and regenerated platform copies. Include the report,
+   run normal CI, and require human review; never auto-merge upstream text or operation changes. Creating a PR
+   with `GITHUB_TOKEN` can leave its checks waiting for approval under GitHub's event rules. A dedicated narrowly
+   scoped GitHub App token can remove that extra approval if unattended CI is required; never store a personal
+   token in source or bypass the CI gates.
+
+Keep automatic source-code fixes, widening failing assertions, live Shodan calls, credit-consuming operations,
+major dependency upgrades, and releases outside this policy. A failed test is evidence to investigate, not a
+reason for an action to weaken validation. Release publishing stays behind the existing tag and environment gates.

@@ -56,6 +56,7 @@ jobs:
           --output-format JSON
           --output-reproducible
           --output-file dist/shodan-skill.cdx.json
+      - run: python scripts/verify_sbom.py dist/shodan-skill.cdx.json
       - name: Generate checksums
         working-directory: dist
         run: sha256sum ./*.whl ./*.tar.gz ./*.json > SHA256SUMS

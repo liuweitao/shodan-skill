@@ -1,6 +1,6 @@
 schema_version: 1
 official_snapshot: references/official-api-snapshot.yaml
-official_retrieved: 2026-07-27
+official_retrieved: 2026-11-10
 official_operation_count: 58
 family_counts:
   rest: 45

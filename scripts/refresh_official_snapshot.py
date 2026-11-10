@@ -6,11 +6,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import sys
+import time
 from collections.abc import Mapping
 from datetime import date
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
@@ -102,7 +104,7 @@ def parse_document(html: str) -> tuple[list[tuple[str, str]], str]:
     return operations, digest
 
 
-def _fetch_document(url: str, *, timeout: float = 30.0) -> str:
+def _fetch_document_once(url: str, *, timeout: float = 30.0) -> str:
     request = Request(
         url,
         headers={
@@ -124,6 +126,22 @@ def _fetch_document(url: str, *, timeout: float = 30.0) -> str:
             raise ValueError(f"official documentation exceeds {MAX_DOCUMENT_BYTES} bytes")
         charset = response.headers.get_content_charset() or "utf-8"
     return body.decode(charset)
+
+
+def _fetch_document(url: str, *, timeout: float = 30.0) -> str:
+    """Retry transient upstream/network errors without accepting partial snapshots."""
+    for attempt in range(3):
+        try:
+            return _fetch_document_once(url, timeout=timeout)
+        except HTTPError as exc:
+            if exc.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
+                raise
+            exc.close()
+        except (URLError, TimeoutError, ConnectionError):
+            if attempt == 2:
+                raise
+        time.sleep(2**attempt)
+    raise AssertionError("retry loop exhausted")
 
 
 def build_snapshot(
@@ -193,6 +211,43 @@ def snapshot_differences(expected: Mapping[str, Any], current: Mapping[str, Any]
     return differences
 
 
+def snapshot_report(expected: Mapping[str, Any], current: Mapping[str, Any]) -> str:
+    """Explain inventory changes separately from text changes that need human review."""
+    differences = snapshot_differences(expected, current)
+    lines = ["# Official Shodan documentation review", ""]
+    if not differences:
+        return "\n".join([*lines, "No documentation or operation changes detected.", ""])
+    lines.extend(["Review upstream documentation before accepting this candidate snapshot.", ""])
+    lines.extend(f"- {difference}" for difference in differences)
+    old = {(operation["api"], operation["method"], operation["path"]) for operation in expected.get("operations", [])}
+    new = {(operation["api"], operation["method"], operation["path"]) for operation in current.get("operations", [])}
+    lines.extend(["", "## Operation inventory", ""])
+    if old == new:
+        lines.append(f"All {len(new)} method/path pairs are unchanged. Text changes can still affect API behavior.")
+    for label, operations in (("Added", new - old), ("Removed", old - new)):
+        lines.extend(f"- {label}: `{family} {method} {path}`" for family, method, path in sorted(operations))
+    lines.extend(["", "## Sources", ""])
+    for family, url in DOCUMENT_SOURCES.items():
+        lines.append(f"- {family}: {url}")
+    lines.extend(
+        [
+            "",
+            "The hashes record normalized visible text, not a semantic diff. Review parameters, credits, permissions,",
+            "and response contracts in each changed source; a stable operation inventory does not prove compatibility.",
+            "Sync `references/api-coverage.yaml` official_retrieved with the accepted snapshot retrieval date,",
+            "then run `python scripts/build_bundles.py` to update every platform copy.",
+            "Never auto-accept a snapshot solely to make the scheduled check green.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _write_report(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
 def _write_snapshot(path: Path, snapshot: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -208,18 +263,39 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--write", action="store_true", help="Fetch docs and replace the checked-in snapshot")
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument("--report", type=Path, help="Write a Markdown review report")
+    parser.add_argument("--candidate-snapshot", type=Path, help="Save fetched evidence without accepting it")
     args = parser.parse_args(argv)
     if args.timeout <= 0 or args.timeout > 120:
         parser.error("--timeout must be greater than zero and at most 120 seconds")
+    if args.candidate_snapshot and args.candidate_snapshot.resolve() == args.snapshot.resolve():
+        parser.error("--candidate-snapshot must differ from --snapshot; use --write to accept changes")
+    if args.report and args.report.resolve() in {
+        args.snapshot.resolve(),
+        args.candidate_snapshot.resolve() if args.candidate_snapshot else None,
+    }:
+        parser.error("--report must differ from the snapshot paths")
     try:
         current = fetch_snapshot(timeout=args.timeout)
-        if args.write:
-            _write_snapshot(args.snapshot, current)
-            print(f"Wrote official API snapshot: {args.snapshot}")
-            return 0
-        expected = load_snapshot(args.snapshot)
+        expected = load_snapshot(args.snapshot) if args.snapshot.exists() or args.check else {}
         differences = snapshot_differences(expected, current)
+        if args.candidate_snapshot:
+            _write_snapshot(args.candidate_snapshot, current)
+        if args.report:
+            _write_report(args.report, snapshot_report(expected, current))
+        if args.write:
+            if differences:
+                _write_snapshot(args.snapshot, current)
+                print(f"Wrote official API snapshot: {args.snapshot}")
+            else:
+                print("Official Shodan documentation snapshot is current; no files changed.")
+            return 0
     except (OSError, UnicodeError, ValueError, yaml.YAMLError) as exc:
+        if args.report:
+            try:
+                _write_report(args.report, "# Official documentation fetch failed\n\n" + str(exc) + "\n")
+            except OSError as report_error:
+                print(f"could not write failure report: {report_error}", file=sys.stderr)
         print(f"official snapshot error: {exc}", file=sys.stderr)
         return 2
     if differences:

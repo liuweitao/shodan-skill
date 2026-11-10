@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: official-documentation-drift
+  cancel-in-progress: false
+
 jobs:
   compare:
     runs-on: ubuntu-latest
@@ -19,4 +23,24 @@ jobs:
           python-version: "3.14"
           check-latest: true
       - run: python -m pip install "PyYAML>=6,<7"
-      - run: python scripts/refresh_official_snapshot.py --check
+      - name: Compare official docs and prepare review evidence
+        run: >-
+          python scripts/refresh_official_snapshot.py --check
+          --report "$RUNNER_TEMP/official-documentation-report.md"
+          --candidate-snapshot "$RUNNER_TEMP/official-api-snapshot.yaml"
+      - name: Publish drift summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/official-documentation-report.md" ]; then
+            cat "$RUNNER_TEMP/official-documentation-report.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload candidate snapshot and report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: official-documentation-review
+          path: |
+            ${{ runner.temp }}/official-documentation-report.md
+            ${{ runner.temp }}/official-api-snapshot.yaml
+          if-no-files-found: warn
+          retention-days: 30
