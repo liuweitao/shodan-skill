@@ -58,6 +58,7 @@ def test_merge_gate_accepts_only_the_configured_protection(tmp_path: Path) -> No
         "auto-merge",
         "bypass",
         "hidden-bypass",
+        "nonzero-bypass-count",
         "disabled",
         "strict",
         "missing-branch",
@@ -84,6 +85,9 @@ def test_merge_gate_fails_closed_for_incomplete_or_weaker_protection(tmp_path: P
         definition["bypass_actors"] = [{"actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "always"}]
     elif weakened == "hidden-bypass":
         del definition["bypass_actors"]
+    elif weakened == "nonzero-bypass-count":
+        del definition["bypass_actors"]
+        definition["bypass_actor_count"] = 1
     elif weakened == "disabled":
         definition["enforcement"] = "disabled"
     elif weakened == "strict":
@@ -219,3 +223,12 @@ def test_bad_manifest_date_field_is_rejected_before_snapshot_changes(snapshot_fi
         prepare_update(candidate, root=root)
     assert (root / "references/official-api-snapshot.yaml").read_bytes() == accepted
     assert (root / "references/api-coverage.yaml").read_text() == bad
+
+
+def test_ruleset_gate_accepts_verified_zero_count_without_reading_actor_identities(tmp_path: Path) -> None:
+    response = protected_repository()
+    definition = response["rulesets"]["123"]
+    del definition["bypass_actors"]
+    definition["bypass_actor_count"] = 0
+    result = run_gate(tmp_path, response)
+    assert result.returncode == 0, result.stderr

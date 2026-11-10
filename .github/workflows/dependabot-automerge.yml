@@ -81,6 +81,25 @@ jobs:
           if any(type(value) is not int or value <= 0 for value in ids):
               raise SystemExit("Invalid ruleset identifier")
           definitions = {str(value): api(f"{prefix}/rulesets/{value}") for value in sorted(ids)}
+          for key, definition in definitions.items():
+              if "bypass_actors" not in definition:
+                  query = "query($id:ID!) { node(id:$id) { id ... on RepositoryRuleset { bypassActors(first:1) { totalCount } } } }"
+                  result = subprocess.run(
+                      ["gh", "api", "graphql", "-f", "query=" + query, "-f", "id=" + definition["node_id"]],
+                      text=True, capture_output=True,
+                  )
+                  if result.returncode:
+                      raise SystemExit(result.stderr)
+                  node = (json.loads(result.stdout).get("data") or {}).get("node") or {}
+                  count = (node.get("bypassActors") or {}).get("totalCount")
+                  if node.get("id") != definition["node_id"] or type(count) is not int or count < 0:
+                      raise SystemExit("Missing or invalid ruleset bypass count")
+                  definition["bypass_actor_count"] = count
+              print(
+                  f"Ruleset {key}: enforcement={definition.get('enforcement')}, "
+                  f"bypass_list_visible={'bypass_actors' in definition}, "
+                  f"bypass_count={definition.get('bypass_actor_count', 'not-needed')}"
+              )
           Path(os.environ["RUNNER_TEMP"], "maintenance-protection.json").write_text(
               json.dumps({"repository": repository, "branch": current_branch, "rules": rules, "rulesets": definitions})
           )
@@ -101,7 +120,11 @@ jobs:
               key for key, definition in definitions.items()
               if definition.get("target") == "branch"
               and definition.get("enforcement") == "active"
-              and definition.get("bypass_actors") == []
+              and (
+                  definition.get("bypass_actors") == []
+                  or ("bypass_actors" not in definition and type(definition.get("bypass_actor_count")) is int
+                      and definition["bypass_actor_count"] == 0)
+              )
           }
           rules = [
               rule for rule in response.get("rules", [])
@@ -138,7 +161,7 @@ jobs:
                   and branch.get("name") == repository.get("default_branch")
                   and branch.get("protected") is True
               ),
-              "active ruleset with a readable empty bypass list": bool(eligible),
+              "active ruleset with a verified zero bypass count": bool(eligible),
               "strict required checks and expected app identities": strict_checks,
               "conversation resolution": conversations,
               "force-push and deletion protection": {"deletion", "non_fast_forward"} <= types,
