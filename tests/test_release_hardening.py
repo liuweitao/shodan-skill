@@ -164,6 +164,10 @@ def test_supply_chain_and_documentation_workflows_have_expected_gates() -> None:
     drift = ROOT.joinpath(".github", "workflows", "docs-drift.yml").read_text(encoding="utf-8")
     assert "schedule:" in drift
     assert "refresh_official_snapshot.py --check" in drift
+    assert "--report" in drift and "--candidate-snapshot" in drift
+    parsed_drift = yaml.load(drift, Loader=yaml.BaseLoader)
+    assert parsed_drift["permissions"] == {"contents": "read"}
+    assert "permissions" not in parsed_drift["jobs"]["compare"]
 
 
 def test_ci_separates_quality_and_compatibility_work_without_duplicate_builds() -> None:
@@ -196,3 +200,17 @@ def test_dependabot_and_private_security_reporting_are_configured() -> None:
     assert "security/advisories/new" in security
     assert "Do not include a real Shodan API key" in security
     assert "A configured API key does not authorize live scanning" in security
+
+
+def test_ci_release_smoke_and_required_gate_cover_all_jobs() -> None:
+    ci = yaml.load(ROOT.joinpath(".github/workflows/ci.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    jobs = ci["jobs"]
+    assert set(jobs["required"]["needs"]) == set(jobs) - {"required"}
+    assert jobs["required"]["if"] == "always()"
+    assert jobs["release-smoke"]["needs"] == "quality"
+    smoke = "\n".join(step.get("run", "") for step in jobs["release-smoke"]["steps"])
+    assert 'python -m pip install ".[release]"' in smoke
+    assert "cyclonedx-py environment .product-venv/bin/python" in smoke
+    assert "python scripts/verify_sbom.py" in smoke
+    docs = yaml.load(ROOT.joinpath(".github/workflows/docs.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    assert docs["on"]["pull_request"] == ""
