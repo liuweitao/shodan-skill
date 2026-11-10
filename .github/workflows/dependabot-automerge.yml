@@ -66,6 +66,7 @@ jobs:
 
           repository = api(prefix)
           branch = quote(repository["default_branch"], safe="")
+          current_branch = api(f"{prefix}/branches/{branch}")
           rules = []
           for page in range(1, 101):
               batch = api(f"{prefix}/rules/branches/{branch}?per_page=100&page={page}")
@@ -81,7 +82,7 @@ jobs:
               raise SystemExit("Invalid ruleset identifier")
           definitions = {str(value): api(f"{prefix}/rulesets/{value}") for value in sorted(ids)}
           Path(os.environ["RUNNER_TEMP"], "maintenance-protection.json").write_text(
-              json.dumps({"repository": repository, "rules": rules, "rulesets": definitions})
+              json.dumps({"repository": repository, "branch": current_branch, "rules": rules, "rulesets": definitions})
           )
       - name: Require configured protection before queueing
         id: protection
@@ -95,6 +96,7 @@ jobs:
           response = json.loads(Path(os.environ["RUNNER_TEMP"], "maintenance-protection.json").read_text())
           repository = response.get("repository") or {}
           definitions = response.get("rulesets") or {}
+          branch = response.get("branch") or {}
           eligible = {
               key for key, definition in definitions.items()
               if definition.get("target") == "branch"
@@ -123,22 +125,26 @@ jobs:
                   }
                   strict_checks |= (
                       parameters.get("strict_required_status_checks_policy") is True
-                      and parameters.get("do_not_enforce_on_create", False) is False
                       and all(checks.get(name) == app for name, app in expected.items())
                   )
               if rule.get("type") == "pull_request":
                   conversations |= parameters.get("required_review_thread_resolution") is True
           types = {rule.get("type") for rule in rules}
-          required = (
-              repository.get("allow_auto_merge") is True
-              and strict_checks and conversations
-              and {"deletion", "non_fast_forward"} <= types
-          )
-          if not required:
-              raise SystemExit(
-                  "Auto-merge refused: active no-bypass ruleset with strict required checks, "
-                  "conversation resolution, deletion and force-push protection is missing or unreadable."
-              )
+          # A create-only exemption cannot affect this existing protected default branch.
+          checks = {
+              "auto-merge enabled": repository.get("allow_auto_merge") is True,
+              "existing protected default branch": (
+                  bool(repository.get("default_branch"))
+                  and branch.get("name") == repository.get("default_branch")
+                  and branch.get("protected") is True
+              ),
+              "active ruleset with a readable empty bypass list": bool(eligible),
+              "strict required checks and expected app identities": strict_checks,
+              "conversation resolution": conversations,
+              "force-push and deletion protection": {"deletion", "non_fast_forward"} <= types,
+          }
+          if not all(checks.values()):
+              raise SystemExit("Auto-merge refused: " + ", ".join(name for name, passed in checks.items() if not passed))
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write("ready=true\n")
       - name: Queue routine update behind required checks

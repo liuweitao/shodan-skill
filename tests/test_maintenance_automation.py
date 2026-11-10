@@ -23,7 +23,8 @@ def protected_repository() -> dict:
     settings = json.loads((ROOT / ".github/maintenance-settings.json").read_text())
     definition = settings["ruleset"]
     return {
-        "repository": {"allow_auto_merge": True},
+        "repository": {"allow_auto_merge": True, "default_branch": "master"},
+        "branch": {"name": "master", "protected": True},
         "rulesets": {"123": deepcopy(definition)},
         "rules": [
             {**deepcopy(rule), "ruleset_id": 123, "ruleset_source_type": "Repository"} for rule in definition["rules"]
@@ -59,7 +60,9 @@ def test_merge_gate_accepts_only_the_configured_protection(tmp_path: Path) -> No
         "hidden-bypass",
         "disabled",
         "strict",
-        "create-exemption",
+        "missing-branch",
+        "wrong-branch",
+        "unprotected-branch",
         "conversations",
         "deletion",
         "force-push",
@@ -85,8 +88,12 @@ def test_merge_gate_fails_closed_for_incomplete_or_weaker_protection(tmp_path: P
         definition["enforcement"] = "disabled"
     elif weakened == "strict":
         status["strict_required_status_checks_policy"] = False
-    elif weakened == "create-exemption":
-        status["do_not_enforce_on_create"] = True
+    elif weakened == "missing-branch":
+        response["branch"] = {}
+    elif weakened == "wrong-branch":
+        response["branch"]["name"] = "another-branch"
+    elif weakened == "unprotected-branch":
+        response["branch"]["protected"] = False
     elif weakened == "conversations":
         review["required_review_thread_resolution"] = False
     elif weakened in {"deletion", "force-push"}:
