@@ -77,7 +77,7 @@ and Actions:write permissions, or in the corresponding GitHub settings pages:
    enable deletion and non-fast-forward protection. The exact ruleset is recorded in the settings JSON.
 2. Keep default workflow permissions read-only and enable Actions to create pull requests. This GitHub setting
    is named “Allow GitHub Actions to create and approve pull requests”; none of these workflows approves PRs.
-   Only the two specific automation jobs declare their required contents/PR write permissions.
+   The two maintenance jobs and the owner-approved identity audit declare their required contents/PR write permissions.
 3. The Dependabot workflow handles same-repository, non-draft PRs targeting the default branch. It never checks
    out PR code. The pinned metadata action verifies Dependabot identity and signed commits. Only verified
    semver minor/patch updates in the configured ecosystems, without maintainer changes, can queue auto-merge.
@@ -95,8 +95,9 @@ Automatic source-code fixes, widening failing assertions, live Shodan calls, cre
 major dependency upgrades, and releases stay outside this policy. Release publishing retains the existing
 version-tag and environment gates.
 
-The read-only `Audit maintenance protection` job reuses the production gate, without checking out code or
-queueing merges. It runs when the policy workflow changes and can be requested with the fixed
+The `Audit maintenance protection` job performs read-only API operations and reuses the production gate,
+without checking out code or queueing merges. Its owner-approved token capabilities match the merge job
+(contents/PR write), because read-only tokens hide merge settings and bypass-list metadata. It runs when the policy workflow changes and can be requested with the fixed
 `maintenance-audit` repository-dispatch event. `official-documentation-check` requests a documentation run.
 These events require authenticated repository write access to trigger; they do not grant runtime permissions.
 Audit and PR-target runs use separate concurrency groups so one cannot cancel the other.

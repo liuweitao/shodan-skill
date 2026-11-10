@@ -161,8 +161,10 @@ jobs:
     if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Owner-approved: match the merge token's visibility; the steps below only read and validate.
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
     steps:
       - name: Read effective branch protection
         env: *protection-env
