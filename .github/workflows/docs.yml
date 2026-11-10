@@ -13,15 +13,6 @@ on:
       - "scripts/verify_manual.py"
       - "tests/test_documentation.py"
   pull_request:
-    paths:
-      - ".github/workflows/docs.yml"
-      - "manual/**"
-      - "mkdocs.yml"
-      - "requirements-docs.txt"
-      - "README.md"
-      - "README_CN.md"
-      - "scripts/verify_manual.py"
-      - "tests/test_documentation.py"
   workflow_dispatch:
 
 permissions:
