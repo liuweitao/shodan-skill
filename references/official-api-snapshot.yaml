@@ -1,10 +1,10 @@
 schema_version: 1
-retrieved_at: '2026-11-10'
+retrieved_at: '2026-11-23'
 generated_by: scripts/refresh_official_snapshot.py
 sources:
   rest:
     url: https://developer.shodan.io/api
-    document_sha256: ee88a36b6f94d9b8ca45466bd94c099bf74a11d6b496fcf1750ca0f655e080c8
+    document_sha256: e4a5ccca14d401d5400a5598e4bf7153278014750358f48a06fb26ab77081e37
     operation_count: 45
   streaming:
     url: https://developer.shodan.io/api/stream
